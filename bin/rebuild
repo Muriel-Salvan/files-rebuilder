@@ -1,0 +1,5 @@
+#!/usr/bin/env ruby
+
+require 'filesrebuilder/Launcher'
+
+FilesRebuilder::Launcher.new.execute(ARGV)

@@ -1,0 +1,47 @@
+PATH
+  remote: .
+  specs:
+    filesrebuilder (0.0.1)
+      fileshunter
+      gtk2
+      ioblockreader
+      rUtilAnts (>= 1.0)
+      ruby-serial
+
+GEM
+  remote: http://rubygems.org/
+  specs:
+    atk (2.0.2-x86-mingw32)
+      glib2 (= 2.0.2)
+    bindata (1.5.0)
+    cairo (1.12.6-x86-mingw32)
+      pkg-config
+    fileshunter (0.1.0.20130725)
+      bindata
+      ioblockreader (>= 1.0.3)
+      rUtilAnts (>= 1.0)
+    gdk_pixbuf2 (2.0.2-x86-mingw32)
+      glib2 (= 2.0.2)
+    glib2 (2.0.2-x86-mingw32)
+      pkg-config
+    gtk2 (2.0.2-x86-mingw32)
+      atk (= 2.0.2)
+      gdk_pixbuf2 (= 2.0.2)
+      pango (= 2.0.2)
+    ioblockreader (1.0.4.20130725)
+    msgpack (0.5.5-x86-mingw32)
+    pango (2.0.2-x86-mingw32)
+      cairo (>= 1.12.5)
+      glib2 (= 2.0.2)
+    pkg-config (1.1.4)
+    rUtilAnts (1.0.1.20130320)
+    rake (10.1.0)
+    ruby-serial (1.0.2.20130725)
+      msgpack
+
+PLATFORMS
+  x86-mingw32
+
+DEPENDENCIES
+  filesrebuilder!
+  rake

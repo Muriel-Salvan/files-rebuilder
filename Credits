@@ -1,0 +1,31 @@
+= Projects used by FilesRebuilder
+
+== FilesHunter
+* Muriel Salvan (http://murielsalvan.users.sourceforge.net)
+* http://fileshunter.sourceforge.net
+* Used to decode segments in files.
+
+== IOBlockReader
+* Muriel Salvan (http://murielsalvan.users.sourceforge.net)
+* http://ioblockreader.sourceforge.net
+* Used to read files efficiently.
+
+== Ruby
+* Yukihiro « matz » Matsumoto (http://www.rubyist.net/~matz/)
+* http://www.ruby-lang.org/
+* Thanks a lot Matz for this truly wonderful language!
+
+== ruby-gnome2
+* ruby-gnome2 (https://github.com/ruby-gnome2)
+* http://ruby-gnome2.sourceforge.jp/
+* Used to have a great looking GUI.
+
+== ruby-serial
+* Muriel Salvan (http://murielsalvan.users.sourceforge.net)
+* http://ruby-serial.sourceforge.net
+* Used to serialize data to load/save files.
+
+== rUtilAnts
+* Muriel Salvan (http://murielsalvan.users.sourceforge.net)
+* http://rutilants.sourceforge.net
+* Used for plugins and logging handling.
