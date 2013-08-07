@@ -57,7 +57,7 @@ module FilesRebuilder
             line_obj_info.segments.each_with_index do |segment, idx_segment|
               segment_line = treestore.append(segments_line)
               segment_line[0] = "Segment ##{idx_segment}: [#{segment.begin_offset}-#{segment.end_offset}]"
-              segment_line[1] = "#{segment.extensions.join(', ')}#{segment.truncated ? ' (Truncated)' : ''} - #{segment.metadata.size} metadata"
+              segment_line[1] = "#{segment.extensions.join(', ')}#{segment.missing_previous_data ? ' (Missing previous data)' : ''}#{segment.truncated ? ' (Truncated)' : ''} (CRC: #{segment.get_crc}) - #{segment.metadata.size} metadata - CRC List: [#{segment.crc_list.join(', ')}]"
               segment.metadata.each do |metadata_key, metadata_value|
                 line = treestore.append(segment_line)
                 line[0] = metadata_key.to_s

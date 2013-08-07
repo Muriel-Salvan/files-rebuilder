@@ -5,7 +5,7 @@ module FilesRebuilder
     class DirLine < GUIHandler
 
       def on_scan_button_clicked(widget)
-        @gui_controller.scan_dir(get_dir_name_from_button(widget))
+        @gui_controller.scan_dir(get_dir_name_from_button(widget), false)
       end
 
       def on_force_scan_button_clicked(widget)

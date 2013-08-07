@@ -1,4 +1,5 @@
 require 'filesrebuilder/Model/DirInfo'
+require 'filesrebuilder/Model/Index'
 
 module FilesRebuilder
 
@@ -10,10 +11,17 @@ module FilesRebuilder
 
       dont_rubyserial :global_mutex
 
+      attr_reader :src_indexes
+      attr_reader :dst_indexes
+
       # Constructor
       def initialize
+        # Flat directories info
         @dirs_info = DirInfo.new
-        # Mutex protecting any access to the data
+        # Indexes
+        @src_indexes = Index.new
+        @dst_indexes = Index.new
+        # Mutex protecting any access to the data (@dirs_info)
         @global_mutex = Mutex.new
       end
 

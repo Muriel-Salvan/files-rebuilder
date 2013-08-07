@@ -30,7 +30,7 @@ module FilesRebuilder
       # Mutex protecting the list of directories
       @dirs_to_scan_mutex = Mutex.new
       # The list of directories to scan
-      # list< [ DirName, ForceScan? ] >
+      # list< [ DirName, ForceScan?, SourceDir? ] >
       @dirs_to_scan = []
       # Mutex protecting access to @scan_jobs
       @scan_jobs_mutex = Mutex.new
@@ -58,10 +58,11 @@ module FilesRebuilder
           if (!@dirs_to_scan.empty?)
             dir_name = nil
             force_scan = nil
+            src_dir = nil
             @dirs_to_scan_mutex.synchronize do
-              dir_name, force_scan = @dirs_to_scan.shift
+              dir_name, force_scan, src_dir = @dirs_to_scan.shift
             end
-            add_dir_to_be_scanned(dir_name, :force_scan => force_scan)
+            add_dir_to_be_scanned(dir_name, :force_scan => force_scan, :src_dir => src_dir)
           end
           sleep(0.1)
         end
@@ -117,9 +118,10 @@ module FilesRebuilder
     # Parameters::
     # * *dir_name* (_String_): Directory name
     # * *force_scan* (_Boolean_): Do we force scan? [default = false]
-    def add_dir_to_scan(dir_name, force_scan = false)
+    # * *src_dir* (_Boolean_): Is the directory to be scanned a source directory? [default = true]
+    def add_dir_to_scan(dir_name, force_scan = false, src_dir = true)
       @dirs_to_scan_mutex.synchronize do
-        @dirs_to_scan << [ dir_name, force_scan ]
+        @dirs_to_scan << [ dir_name, force_scan, src_dir ]
       end
     end
 
@@ -183,9 +185,11 @@ module FilesRebuilder
     # * *dir_name* (_String_): Directory to scan
     # * *options* (<em>map<Symbol,Object></em>): Addition options [default = {}]
     #   * *:force_scan* (_Boolean_): Do we scan files and directories that have already been scanned? [default = false]
+    #   * *:src_dir* (_Boolean_): Is the directory a source directory? [default = true]
     def add_dir_to_be_scanned(dir_name, options = {})
       # Parse options
-      force_scan = (options[:force_scan] == nil) ? false : options[:force_scan]
+      force_scan = (options.has_key?(:force_scan) ? options[:force_scan] : false)
+      src_dir = (options.has_key?(:src_dir) ? options[:src_dir] : true)
       absolute_dir_name = File.expand_path(dir_name)
       puts "[DirScanner] - Registering directory #{absolute_dir_name} to be scanned..."
       @gui_controller.notify("Registering directory #{absolute_dir_name} to be scanned...")
@@ -195,7 +199,7 @@ module FilesRebuilder
       if (file_infos.empty?)
         @gui_controller.notify("No file to be scanned in #{absolute_dir_name}.")
       else
-        dir_scan_job = DirScanJob.new(file_infos)
+        dir_scan_job = DirScanJob.new(file_infos, (src_dir ? @data.src_indexes : @data.dst_indexes) )
         # Make it available for FilesScanner threads
         @scan_jobs_mutex.synchronize do
           @scan_jobs[dir_name] = dir_scan_job

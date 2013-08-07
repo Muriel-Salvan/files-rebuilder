@@ -175,7 +175,17 @@ module FilesRebuilder
     # * *dir_name* (_String_): The directory to scan
     # * *force_scan* (_Boolean_): Do we force scan? [default = false]
     def scan_dir(dir_name, force_scan = false)
-      @dir_scanner.add_dir_to_scan(dir_name, force_scan)
+      # Check whether this directory is source or destination
+      src_dir = false
+      main_handler = @gui_factory.get_gui_handler('Main')
+      dirline_handler = @gui_factory.get_gui_handler('DirLine')
+      main_handler.get_src_dirlines(@main_widget).each do |dirline_widget|
+        if (dirline_handler.get_dir_name(dirline_widget) == dir_name)
+          src_dir = true
+          break
+        end
+      end
+      @dir_scanner.add_dir_to_scan(dir_name, force_scan, src_dir)
     end
 
     # Display the content of a directory in a new window

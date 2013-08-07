@@ -7,13 +7,16 @@ module FilesRebuilder
 
     attr_reader :nbr_files_scanner
     attr_reader :dir_name
+    attr_reader :index
 
     # Constructor
     #
     # Parameters::
     # * *files_to_scan* (<em>map<String,FileInfo></em>): The set of files to be scanned for this job
-    def initialize(files_to_scan)
+    # * *index* (_Index_): Index to be updated with this directory's content
+    def initialize(files_to_scan, index)
       @files_to_scan = files_to_scan
+      @index = index
       # Number of FilesScanner threads scanning a file from this DirScanJob
       @nbr_files_scanner = 0
       # Mutex protecting access to @files_to_scan and @nbr_files_scanner

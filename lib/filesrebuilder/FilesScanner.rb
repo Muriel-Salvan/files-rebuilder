@@ -48,7 +48,7 @@ module FilesRebuilder
           if (scan_job != nil)
             # We are sure to have exclusivity on this file
             Thread.current[:segments_analyzer].set_scan_job(scan_job)
-            scan_file(absolute_file_name, file_info)
+            scan_file(absolute_file_name, file_info, scan_job.index)
             job_finished = scan_job.file_scanned(absolute_file_name, file_info)
             @dir_scanner.finished_scan(scan_job) if (job_finished)
           end
@@ -105,7 +105,8 @@ module FilesRebuilder
     # Parameters::
     # * *absolute_file_name* (_String_): File name
     # * *file_info* (_FileInfo_): File info to fill
-    def scan_file(absolute_file_name, file_info)
+    # * *index* (_Index_): Index to be updated
+    def scan_file(absolute_file_name, file_info, index)
       puts "[FilesScanner] - Scan file #{absolute_file_name}..."
       begin
         # Get generic properties
@@ -115,6 +116,24 @@ module FilesRebuilder
         file_info.crc_list = get_file_crc(absolute_file_name)
         # Get format specific ones
         file_info.segments = Thread.current[:segments_analyzer].get_segments(absolute_file_name)
+        # If there is just 1 segment, use the already computed crc_list
+        if (file_info.segments.size == 1)
+          file_info.segments[0].crc_list = file_info.crc_list
+        else
+          # Need to compute crc_list for each segment
+          file_info.segments.each do |segment|
+            lst_crc = []
+            File.open(absolute_file_name, 'rb') do |file|
+              IOBlockReader::init(file, :block_size => Model::FileInfo::CRC_BLOCK_SIZE).each_block(segment.begin_offset..segment.end_offset-1) do |data_block|
+                lst_crc << Zlib.crc32(data_block, 0).to_s(16).upcase
+              end
+            end
+            segment.crc_list = lst_crc
+          end
+        end
+        # Add indexes
+        index.add(absolute_file_name, file_info)
+        # Everything went fine
         file_info.filled = true
       rescue
         puts "!!! Unable to scan file #{absolute_file_name}: #{$!}\n#{$!.backtrace.join("\n")}"
