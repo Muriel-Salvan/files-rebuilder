@@ -135,6 +135,7 @@ module FilesRebuilder
         index.add(absolute_file_name, file_info)
         # Everything went fine
         file_info.filled = true
+        log_debug "File scanned: #{absolute_file_name}: Size=#{file_info.size} Date=#{file_info.date} - #{file_info.segments.size} segments"
       rescue
         log_err "Unable to scan file #{absolute_file_name}: #{$!}\n#{$!.backtrace.join("\n")}"
       end

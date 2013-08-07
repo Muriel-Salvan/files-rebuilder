@@ -26,6 +26,10 @@ module FilesRebuilder
 
       CRC_BLOCK_SIZE = 4096
 
+      # File base name
+      #   String
+      attr_accessor :base_name
+
       # Whether the info was filled or not
       #   Boolean
       attr_accessor :filled

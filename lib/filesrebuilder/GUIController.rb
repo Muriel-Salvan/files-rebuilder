@@ -321,6 +321,19 @@ module FilesRebuilder
       end
     end
 
+    # Get matching file info for a given file info.
+    # This is done by looking at indexes.
+    #
+    # Parameters::
+    # * *file_info* (_FileInfo_): Corresponding FileInfo
+    # * *segment_index* (_Fixnum_): Segment index in this file info. Set to nil to consider all segments. [default = nil]
+    # Result::
+    # * _MatchingIndex_: The source index info, containing only matching files
+    # * _MatchingIndex_: The destination index info, containing only matching files
+    def get_matching_file_info(file_info, segment_index = nil)
+      return @data.src_indexes.get_matching_file_info(file_info, segment_index), @data.dst_indexes.get_matching_file_info(file_info, segment_index)
+    end
+
     private
 
     # Print a number of seconds in a human-friendly way

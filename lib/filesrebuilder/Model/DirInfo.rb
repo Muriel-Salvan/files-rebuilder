@@ -7,6 +7,10 @@ module FilesRebuilder
     # Contains information from the scan of a directory
     class DirInfo
 
+      # Directory base name
+      #   String
+      attr_accessor :base_name
+
       # Data scan of each sub-directory
       #   map< dir_base_name, dir_info >
       #   map< String, DirInfo >
