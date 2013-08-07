@@ -120,6 +120,22 @@ module FilesRebuilder
         end
       end
 
+      # Get a list of file info belonging to a given directory
+      #
+      # Parameters::
+      # * *dir_name* (_String_): Directory name to search in
+      # Result::
+      # * <em>list< FileInfo ></em>: The list of all FileInfo for this directory
+      def get_file_info_from_dir(dir_name)
+        lst_fileinfo = []
+
+        @global_mutex.synchronize do
+          lst_fileinfo.concat(get_file_info_from_dir_unprotected(dir_info_unprotected(dir_name)))
+        end
+
+        return lst_fileinfo
+      end
+
       private
 
       FILE_SEPARATOR_REGEXP = Regexp.union(*[File::SEPARATOR, File::ALT_SEPARATOR].compact)
@@ -158,6 +174,22 @@ module FilesRebuilder
         end
 
         return dir_info
+      end
+
+      # Get a list of file info belonging to a given directory
+      #
+      # Parameters::
+      # * *dir_info* (_DirInfo_): Directory info to search in
+      # Result::
+      # * <em>list< FileInfo ></em>: The list of all FileInfo for this directory
+      def get_file_info_from_dir_unprotected(dir_info)
+        lst_fileinfo = dir_info.files.values
+
+        dir_info.sub_dirs.values.each do |subdir_info|
+          lst_fileinfo.concat(get_file_info_from_dir_unprotected(subdir_info))
+        end
+
+        return lst_fileinfo
       end
 
     end

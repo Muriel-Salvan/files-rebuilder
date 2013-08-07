@@ -61,7 +61,7 @@ module FilesRebuilder
             :crc => file_info.get_crc,
             :base_name => File.basename(absolute_file_name)[0..-1-file_extension.size],
             :size => file_info.size,
-            :date => file_info.date,
+            :date => file_info.date
           }
           indexed_data[:ext] = file_extension[1..-1] if (!file_extension.empty?)
           indexed_data.each do |index_name, data|
@@ -103,6 +103,35 @@ module FilesRebuilder
                 @segments_metadata[segment.extensions][metadata_key] = {} if (!@segments_metadata[segment.extensions].has_key?(metadata_key))
                 @segments_metadata[segment.extensions][metadata_key][metadata_value] = [] if (!@segments_metadata[segment.extensions][metadata_key].has_key?(metadata_value))
                 @segments_metadata[segment.extensions][metadata_key][metadata_value] << fileinfo_pointer
+              end
+            end
+          end
+        end
+      end
+
+      # Delete a list of FileInfo from the indexed data
+      #
+      # Parameters::
+      # * *lst_file_info* (<em>list< FileInfo ></em>): The list of FileInfo to be removed
+      def remove(lst_file_info)
+        @global_mutex.synchronize do
+          # Gather the list of lists to update
+          lst_lst_file_info = []
+          INDEXES_LIST.each do |index_name|
+            lst_lst_file_info.concat(@indexes[index_name].values)
+          end
+          @segments_metadata.values.each do |metadata_key_map|
+            metadata_key_map.values do |metadata_value_map|
+              lst_lst_file_info.concat(metadata_value_map.values)
+            end
+          end
+          # Update them for real
+          lst_lst_file_info.each do |lst_pointers|
+            lst_pointers.delete_if do |pointer|
+              if pointer.is_a?(FileInfo)
+                next lst_file_info.include?(pointer)
+              else
+                next lst_file_info.include?(pointer[0])
               end
             end
           end

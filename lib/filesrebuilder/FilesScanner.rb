@@ -107,7 +107,7 @@ module FilesRebuilder
     # * *file_info* (_FileInfo_): File info to fill
     # * *index* (_Index_): Index to be updated
     def scan_file(absolute_file_name, file_info, index)
-      puts "[FilesScanner] - Scan file #{absolute_file_name}..."
+      log_info "[FilesScanner] - Scan file #{absolute_file_name}..."
       begin
         # Get generic properties
         file_stat = File.stat(absolute_file_name)
@@ -136,7 +136,7 @@ module FilesRebuilder
         # Everything went fine
         file_info.filled = true
       rescue
-        puts "!!! Unable to scan file #{absolute_file_name}: #{$!}\n#{$!.backtrace.join("\n")}"
+        log_err "Unable to scan file #{absolute_file_name}: #{$!}\n#{$!.backtrace.join("\n")}"
       end
     end
 

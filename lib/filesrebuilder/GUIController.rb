@@ -96,11 +96,23 @@ module FilesRebuilder
     def delete_dirline(dir_name)
       main_handler = @gui_factory.get_gui_handler('Main')
       dirline_handler = @gui_factory.get_gui_handler('DirLine')
+      found = false
       main_handler.get_dest_dirlines(@main_widget).each do |dest_dirline|
-        main_handler.remove_dest_dirline(@main_widget, dest_dirline) if (dirline_handler.get_dir_name(dest_dirline) == dir_name)
+        if (dirline_handler.get_dir_name(dest_dirline) == dir_name)
+          # Remove all previously indexed fileinfo
+          @data.dst_indexes.remove(@data.get_file_info_from_dir(dir_name)) if (!found)
+          main_handler.remove_dest_dirline(@main_widget, dest_dirline)
+          found = true
+        end
       end
+      found = false
       main_handler.get_src_dirlines(@main_widget).each do |src_dirline|
-        main_handler.remove_src_dirline(@main_widget, src_dirline) if (dirline_handler.get_dir_name(src_dirline) == dir_name)
+        if (dirline_handler.get_dir_name(src_dirline) == dir_name)
+          # Remove all previously indexed fileinfo
+          @data.src_indexes.remove(@data.get_file_info_from_dir(dir_name)) if (!found)
+          main_handler.remove_src_dirline(@main_widget, src_dirline)
+          found = true
+        end
       end
     end
 
@@ -184,6 +196,11 @@ module FilesRebuilder
           src_dir = true
           break
         end
+      end
+      if force_scan
+        # Remove all previously indexed fileinfo
+        lst_fileinfo = @data.get_file_info_from_dir(dir_name)
+        src_dir ? @data.src_indexes.remove(lst_fileinfo) : @data.dst_indexes.remove(lst_fileinfo)
       end
       @dir_scanner.add_dir_to_scan(dir_name, force_scan, src_dir)
     end

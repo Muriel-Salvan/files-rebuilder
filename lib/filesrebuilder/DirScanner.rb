@@ -191,7 +191,7 @@ module FilesRebuilder
       force_scan = (options.has_key?(:force_scan) ? options[:force_scan] : false)
       src_dir = (options.has_key?(:src_dir) ? options[:src_dir] : true)
       absolute_dir_name = File.expand_path(dir_name)
-      puts "[DirScanner] - Registering directory #{absolute_dir_name} to be scanned..."
+      log_info "[DirScanner] - Registering directory #{absolute_dir_name} to be scanned..."
       @gui_controller.notify("Registering directory #{absolute_dir_name} to be scanned...")
       root_dir_info = @data.get_or_create_dir_info(absolute_dir_name)
       # Get the list of files to parse
@@ -250,7 +250,7 @@ module FilesRebuilder
         # Delete all FileInfo that are not in the directory anymore (deleted files)
         @data.keep_file_infos(dir_info, lst_file_base_names)
       rescue
-        puts "[DirScanner] - Exception while parsing #{dir_name}: #{$!}\n#{$!.backtrace.join("\n")}"
+        log_err "[DirScanner] - Exception while parsing #{dir_name}: #{$!}\n#{$!.backtrace.join("\n")}"
         @gui_controller.notify("Error while scanning #{dir_name}: #{$!}")
       end
 
