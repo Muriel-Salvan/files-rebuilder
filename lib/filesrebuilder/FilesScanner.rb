@@ -1,29 +1,22 @@
 require 'fileshunter'
 
-module FilesHunter
-
-  class SegmentsAnalyzer
-
-    def set_scan_job(scan_job)
-      @scan_job = scan_job
-    end
-
-    def new_add_bytes_decoded(nbr_bytes)
-      self.old_add_bytes_decoded(nbr_bytes)
-      @scan_job.partial_file_scanned(*self.progression)
-    end
-    alias :old_add_bytes_decoded :add_bytes_decoded
-    alias :add_bytes_decoded :new_add_bytes_decoded
-
-  end
-
-end
-
-
 module FilesRebuilder
 
   # Scan files from a common list. Thread-safe.
   class FilesScanner
+
+    module SegmentsAnalyzerForScanJob
+
+      def set_scan_job(scan_job)
+        @scan_job = scan_job
+      end
+
+      def add_bytes_decoded(nbr_bytes)
+        super
+        @scan_job.partial_file_scanned(*self.progression)
+      end
+
+    end
 
     # Constructor
     #
@@ -41,13 +34,15 @@ module FilesRebuilder
     def run
       @scanner_thread = Thread.new do
         # Get a Segments Analyzer
-        Thread.current[:segments_analyzer] = FilesHunter::get_segments_analyzer(:block_size => @block_size)
+        segments_analyzer = FilesHunter::get_segments_analyzer(:block_size => @block_size)
+        segments_analyzer.extend(SegmentsAnalyzerForScanJob)
+        Thread.current[:segments_analyzer] = segments_analyzer
         while (!@exiting)
           # Get the next file to scan
           scan_job, absolute_file_name, file_info = get_file_to_scan
           if (scan_job != nil)
             # We are sure to have exclusivity on this file
-            Thread.current[:segments_analyzer].set_scan_job(scan_job)
+            segments_analyzer.set_scan_job(scan_job)
             scan_file(absolute_file_name, file_info, scan_job.index)
             job_finished = scan_job.file_scanned(absolute_file_name, file_info)
             @dir_scanner.finished_scan(scan_job) if (job_finished)
@@ -107,7 +102,7 @@ module FilesRebuilder
     # * *file_info* (_FileInfo_): File info to fill
     # * *index* (_Index_): Index to be updated
     def scan_file(absolute_file_name, file_info, index)
-      log_info "[FilesScanner] - Scan file #{absolute_file_name}..."
+      log_info "[FilesScanner ##{Thread.current.object_id}] - Scan file #{absolute_file_name}..."
       begin
         # Get generic properties
         file_stat = File.stat(absolute_file_name)
@@ -135,9 +130,9 @@ module FilesRebuilder
         index.add(absolute_file_name, file_info)
         # Everything went fine
         file_info.filled = true
-        log_debug "File scanned: #{absolute_file_name}: Size=#{file_info.size} Date=#{file_info.date} - #{file_info.segments.size} segments"
+        log_debug "[FilesScanner ##{Thread.current.object_id}] - File scanned: #{absolute_file_name}: Size=#{file_info.size} Date=#{file_info.date} - #{file_info.segments.size} segments"
       rescue
-        log_err "Unable to scan file #{absolute_file_name}: #{$!}\n#{$!.backtrace.join("\n")}"
+        log_err "[FilesScanner ##{Thread.current.object_id}] - Unable to scan file #{absolute_file_name}: #{$!}\n#{$!.backtrace.join("\n")}"
       end
     end
 
