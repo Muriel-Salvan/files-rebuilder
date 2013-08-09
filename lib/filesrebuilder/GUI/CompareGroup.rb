@@ -12,14 +12,14 @@ module FilesRebuilder
       NODE_TYPE_MATCHING_FILE = 4
 
       # The main tree view contains items that are organized this way:
-      # +- [ NODE_TYPE_DIR, DirInfo, index ] - Directory being parsed
-      #    +- [ NODE_TYPE_DIR, DirInfo, index ] - Sub-directory being parsed
+      # +- [ NODE_TYPE_DIR, DirInfo, index, MatchingSelection ] - Directory being parsed
+      #    +- [ NODE_TYPE_DIR, DirInfo, index, MatchingSelection ] - Sub-directory being parsed
       #    +- [ NODE_TYPE_FILE, FileInfo, MatchingInfo ] - File belonging to this directory
       #       +- [ NODE_TYPE_CRC_MATCHING_FILE, pointer ] - Matching file
-      #       +- [ NODE_TYPE_MATCHING_FILE, pointer, selected, MatchingIndexSinglePointer ] - Matching file
+      #       +- [ NODE_TYPE_MATCHING_FILE, pointer, MatchingIndexSinglePointer, MatchingSelection ] - Matching file
       #       +- [ NODE_TYPE_SEGMENT, SegmentPointer, MatchingInfo ] - Segment belonging to this file
       #          +- [ NODE_TYPE_CRC_MATCHING_FILE, pointer ] - Matching file
-      #          +- [ NODE_TYPE_MATCHING_FILE, pointer, selected, MatchingIndexSinglePointer ] - Matching file
+      #          +- [ NODE_TYPE_MATCHING_FILE, pointer, MatchingIndexSinglePointer, MatchingSelection ] - Matching file
 
       def on_treeview_row_expanded(widget, tree_iter, tree_path)
         # If the only child has no data, it means it is a fake child, and we have to create real children
@@ -31,10 +31,10 @@ module FilesRebuilder
           when NODE_TYPE_DIR
             # Directory
             line_obj_info[1].sub_dirs.values.each do |child_dir_info|
-              add_obj_info(widget.model, tree_iter, child_dir_info, line_obj_info[2])
+              add_obj_info(widget.model, tree_iter, child_dir_info, line_obj_info[2], line_obj_info[3])
             end
             line_obj_info[1].files.values.each do |child_file_info|
-              add_obj_info(widget.model, tree_iter, child_file_info, line_obj_info[2])
+              add_obj_info(widget.model, tree_iter, child_file_info, line_obj_info[2], line_obj_info[3])
             end
           end
           # Delete the fake child (do it after inserting others otherwise expansion will be cancelled)
@@ -132,10 +132,10 @@ module FilesRebuilder
               line[1] = metadata_value.to_s
             end
           when NODE_TYPE_MATCHING_FILE
-            matching_info = line_obj_info[3]
+            matching_info = line_obj_info[2]
             line = treestore.append(nil)
             line[0] = 'Selected?'
-            line[1] = line_obj_info[2].inspect
+            line[1] = (line_obj_info[3].matching_pointers[selected_item.parent[0][1]] == line_obj_info[1]).inspect
             line = treestore.append(nil)
             line[0] = 'Score'
             line[1] = matching_info.score.to_s
@@ -168,12 +168,13 @@ module FilesRebuilder
       # * *widget* (<em>Gtk::Widget</em>): The CompareGroup widget
       # * *lst_dirs* (<em>list< [ String, DirInfo ] ></em>): List of directories to display
       # * *index* (<em>Model::Index</em>): Index used to get matching files
-      def set_dirs_to_compare(widget, lst_dirs, index)
+      # * *matching_selection* (<em>Model::MatchingSelection</em>): Matching selection
+      def set_dirs_to_compare(widget, lst_dirs, index, matching_selection)
 
         # Create the main TreeStore
         treestore = Gtk::TreeStore.new(Model::DirInfo)
         lst_dirs.each do |dir_name, dir_info|
-          add_obj_info(treestore, nil, dir_info, index)
+          add_obj_info(treestore, nil, dir_info, index, matching_selection)
         end
         # Assign TreeStore to the view
         view = get_tree_view(widget)
@@ -197,7 +198,7 @@ module FilesRebuilder
           when NODE_TYPE_CRC_MATCHING_FILE
             renderer.stock_id = Gtk::Stock::COPY
           when NODE_TYPE_MATCHING_FILE
-            renderer.stock_id = (line_obj_info[2] ? Gtk::Stock::APPLY : Gtk::Stock::DISCARD)
+            renderer.stock_id = Gtk::Stock::FILE
           else
             raise "Unknown node type: #{line_obj_info[0]}"
           end
@@ -237,12 +238,44 @@ module FilesRebuilder
               renderer.text = "#{line_obj_info[1].file_info.get_absolute_name} ##{line_obj_info[1].idx_segment}"
             end
             renderer.foreground_set = false
-            renderer.weight = line_obj_info[2] ? Pango::WEIGHT_BOLD : Pango::WEIGHT_NORMAL
+            renderer.weight = (line_obj_info[3].matching_pointers[iter.parent[0][1]] == line_obj_info[1]) ? Pango::WEIGHT_BOLD : Pango::WEIGHT_NORMAL
+          end
+        end
+        # == Selection ==
+        cell_renderer_selection = Gtk::CellRendererToggle.new
+        view_column_selection = Gtk::TreeViewColumn.new('Select', cell_renderer_selection)
+        view.append_column(view_column_selection)
+        cell_renderer_selection.activatable = true
+        cell_renderer_selection.radio = true
+        view_column_selection.set_cell_data_func(cell_renderer_selection) do |column, renderer, model, iter|
+          line_obj_info = iter[0]
+          if (line_obj_info[0] == NODE_TYPE_MATCHING_FILE)
+            renderer.visible = true
+            renderer.active = (line_obj_info[3].matching_pointers[iter.parent[0][1]] == line_obj_info[1])
+          else
+            renderer.visible = false
+            renderer.active = false
+          end
+        end
+        cell_renderer_selection.signal_connect('toggled') do |event_widget, path|
+          iter = treestore.get_iter(path)
+          if (iter != nil)
+            line_obj_info = iter[0]
+            if (line_obj_info[0] == NODE_TYPE_MATCHING_FILE)
+              matching_pointers = line_obj_info[3].matching_pointers
+              pointer = iter.parent[0][1]
+              matching_pointer = line_obj_info[1]
+              if (matching_pointers[pointer] == matching_pointer)
+                matching_pointers.delete(pointer)
+              else
+                matching_pointers[pointer] = matching_pointer
+              end
+            end
           end
         end
         # == Count ==
         cell_renderer_count = Gtk::CellRendererText.new
-        view_column_count = Gtk::TreeViewColumn.new('Date', cell_renderer_count)
+        view_column_count = Gtk::TreeViewColumn.new('Count', cell_renderer_count)
         view.append_column(view_column_count)
         view_column_count.set_cell_data_func(cell_renderer_count) do |column, renderer, model, iter|
           line_obj_info = iter[0]
@@ -256,7 +289,7 @@ module FilesRebuilder
           when NODE_TYPE_CRC_MATCHING_FILE
             renderer.text = ''
           when NODE_TYPE_MATCHING_FILE
-            matching_info = line_obj_info[3]
+            matching_info = line_obj_info[2]
             nbr_metadata = 0
             matching_info.segments_metadata.values.each do |segment_data|
               segment_data.values.each do |lst_data|
@@ -313,12 +346,13 @@ module FilesRebuilder
       # * *parent_elem* (<em>Gtk::TreeIter</em>): Element to create the DirInfo into
       # * *obj_info* (_Object_): The model object to add to the treestore. Can be DirInfo, FileInfo or SegmentPointer.
       # * *index* (_Index_): The index used to get matching files
-      def add_obj_info(treestore, parent_elem, obj_info, index)
+      # * *matching_selection* (_MatchingSelection_): The matching selection
+      def add_obj_info(treestore, parent_elem, obj_info, index, matching_selection)
         new_elem = treestore.append(parent_elem)
         has_children = false
         case
         when (obj_info.class == Model::DirInfo)
-          new_elem[0] = [ NODE_TYPE_DIR, obj_info, index ]
+          new_elem[0] = [ NODE_TYPE_DIR, obj_info, index, matching_selection ]
           has_children = ((!obj_info.sub_dirs.empty?) or (!obj_info.files.empty?))
         when ((obj_info.class == Model::FileInfo) or (obj_info.class == Model::SegmentPointer))
           # Get the MatchingInfo
@@ -329,15 +363,15 @@ module FilesRebuilder
           matching_info.crc_matching_files.each do |pointer|
             treestore.append(new_elem)[0] = [ NODE_TYPE_CRC_MATCHING_FILE, pointer ]
           end
-          # Create all the matching elements
-          matching_info.matching_files.each do |pointer, matching_file_info|
-            treestore.append(new_elem)[0] = [ NODE_TYPE_MATCHING_FILE, pointer, (matching_info.selected_pointer == pointer), matching_file_info ]
+          # Create all the matching elements, sorted by decreasing score
+          matching_info.matching_files.sort_by { |pointer, matching_file_info| matching_file_info.score }.reverse_each do |pointer, matching_file_info|
+            treestore.append(new_elem)[0] = [ NODE_TYPE_MATCHING_FILE, pointer, matching_file_info, matching_selection ]
           end
           # Create sub-segments if need be
           if ((obj_info.is_a?(Model::FileInfo)) and
               (obj_info.segments.size > 1))
             obj_info.segments.size.times do |idx_segment|
-              add_obj_info(treestore, new_elem, Model::SegmentPointer.new(obj_info, idx_segment), index)
+              add_obj_info(treestore, new_elem, Model::SegmentPointer.new(obj_info, idx_segment), index, matching_selection)
             end
           end
         else

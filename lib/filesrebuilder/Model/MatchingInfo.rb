@@ -29,10 +29,6 @@ module FilesRebuilder
       #   map< ( FileInfo  | SegmentInfo ),  MatchingIndexSinglePointer >
       attr_reader :matching_files
 
-      # Selected matching file
-      #   FileInfo | SegmentInfo
-      attr_accessor :selected_pointer
-
       # Constructor
       #
       # Parameters::
@@ -40,7 +36,6 @@ module FilesRebuilder
       def initialize(matching_index)
         @matching_files = {}
         @crc_matching_files = {}
-        @selected_pointer = nil
         # First find CRC matching files
         if (matching_index.indexes.has_key?(:crc))
           matching_index.indexes[:crc].each do |data, lst_pointers|

@@ -1,5 +1,6 @@
 require 'filesrebuilder/Model/DirInfo'
 require 'filesrebuilder/Model/Index'
+require 'filesrebuilder/Model/MatchingSelection'
 
 module FilesRebuilder
 
@@ -13,6 +14,8 @@ module FilesRebuilder
 
       attr_reader :src_indexes
       attr_reader :dst_indexes
+      attr_reader :src_selection
+      attr_reader :dst_selection
 
       # Constructor
       def initialize
@@ -21,6 +24,9 @@ module FilesRebuilder
         # Indexes
         @src_indexes = Index.new
         @dst_indexes = Index.new
+        # Selection
+        @src_selection = MatchingSelection.new
+        @dst_selection = MatchingSelection.new
         # Mutex protecting any access to the data (@dirs_info)
         @global_mutex = Mutex.new
       end

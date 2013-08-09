@@ -344,6 +344,7 @@ module FilesRebuilder
       # list< [ absolute_dir_name, dir_info ] >
       lst_dirs = []
       index = nil
+      matching_selection = nil
       main_handler = @gui_factory.get_gui_handler('Main')
       dirline_handler = @gui_factory.get_gui_handler('DirLine')
       if src_reference
@@ -352,17 +353,19 @@ module FilesRebuilder
           lst_dirs << [ dir_name, @data.dir_info(dir_name) ]
         end
         index = @data.dst_indexes
+        matching_selection = @data.src_selection
       else
         main_handler.get_dest_dirlines(@main_widget).each do |dirline|
           dir_name = dirline_handler.get_dir_name(dirline)
           lst_dirs << [ dir_name, @data.dir_info(dir_name) ]
         end
         index = @data.src_indexes
+        matching_selection = @data.dst_selection
       end
       # Display CompareGroup window
       new_widget = @gui_factory.new_widget('CompareGroup')
       compare_group_handler = @gui_factory.get_gui_handler('CompareGroup')
-      compare_group_handler.set_dirs_to_compare(new_widget, lst_dirs, index)
+      compare_group_handler.set_dirs_to_compare(new_widget, lst_dirs, index, matching_selection)
       new_widget.show
     end
 
