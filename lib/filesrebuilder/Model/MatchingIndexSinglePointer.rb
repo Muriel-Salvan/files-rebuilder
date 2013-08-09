@@ -18,6 +18,11 @@ module FilesRebuilder
       #   map< list< Symbol >,    map< Symbol,        list< Object > > >
       attr_reader :segments_metadata
 
+      # List of matching sequences of blocks' CRC
+      #   map< first_block_offset, map< matching_block_offset, list< block_crc > > >
+      #   map< Fixnum,             map< Fixnum,                list< String > > >
+      attr_reader :block_crc_sequences
+
       # Score given to this match.
       # The higher the closer pointers are.
       #   Fixnum
@@ -27,6 +32,7 @@ module FilesRebuilder
       def initialize
         @indexes = {}
         @segments_metadata = {}
+        @block_crc_sequences = {}
         @score = 0
       end
 

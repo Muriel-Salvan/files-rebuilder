@@ -384,7 +384,7 @@ module FilesRebuilder
         idx_segment = pointer.idx_segment
       end
       # Create the index subset, matching our pointer then use it to find matching files
-      return Model::MatchingInfo.new(index.get_matching_index(file_info, idx_segment))
+      return Model::MatchingInfo.new(index.get_matching_index(file_info, idx_segment), pointer)
     end
 
     private

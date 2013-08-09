@@ -18,6 +18,7 @@ module FilesRebuilder
         :segment_ext => 2
       }
       COEFF_SEGMENT_METADATA = 1
+      COEFF_BLOCK_CRC_SEQUENCE = 4
 
       # CRC Matching files
       #   list< ( file_info | segment_info ) >
@@ -33,7 +34,8 @@ module FilesRebuilder
       #
       # Parameters::
       # * *matching_index* (_MatchingIndex_): Matching index used to compute this MatchingInfo
-      def initialize(matching_index)
+      # * *pointer* (_FileInfo_ or _SegmentPointer_): Pointer of the file for which we have matching index
+      def initialize(matching_index, pointer)
         @matching_files = {}
         @crc_matching_files = {}
         # First find CRC matching files
@@ -46,12 +48,12 @@ module FilesRebuilder
         matching_index.indexes.each do |index_name, index_data|
           if (index_name != :crc)
             index_data.each do |data, lst_pointers|
-              lst_pointers.each do |pointer|
-                if (!@crc_matching_files.has_key?(pointer))
-                  @matching_files[pointer] = MatchingIndexSinglePointer.new if (!@matching_files.has_key?(pointer))
-                  @matching_files[pointer].score += COEFFS[index_name]
-                  @matching_files[pointer].indexes[index_name] = [] if (!@matching_files[pointer].indexes.has_key?(index_name))
-                  @matching_files[pointer].indexes[index_name] << data
+              lst_pointers.each do |matching_pointer|
+                if (!@crc_matching_files.has_key?(matching_pointer))
+                  @matching_files[matching_pointer] = MatchingIndexSinglePointer.new if (!@matching_files.has_key?(matching_pointer))
+                  @matching_files[matching_pointer].score += COEFFS[index_name]
+                  @matching_files[matching_pointer].indexes[index_name] = [] if (!@matching_files[matching_pointer].indexes.has_key?(index_name))
+                  @matching_files[matching_pointer].indexes[index_name] << data
                 end
               end
             end
@@ -60,14 +62,61 @@ module FilesRebuilder
         matching_index.segments_metadata.each do |segment_ext, segment_ext_data|
           segment_ext_data.each do |metadata_key, metadata_data|
             metadata_data.each do |metadata_value, lst_pointers|
-              lst_pointers.each do |pointer|
-                if (!@crc_matching_files.has_key?(pointer))
-                  @matching_files[pointer] = MatchingIndexSinglePointer.new if (!@matching_files.has_key?(pointer))
-                  @matching_files[pointer].score += COEFF_SEGMENT_METADATA
-                  @matching_files[pointer].segments_metadata[segment_ext] = {} if (!@matching_files[pointer].segments_metadata.has_key?(segment_ext))
-                  @matching_files[pointer].segments_metadata[segment_ext][metadata_key] = [] if (!@matching_files[pointer].segments_metadata[segment_ext].has_key?(metadata_key))
-                  @matching_files[pointer].segments_metadata[segment_ext][metadata_key] << metadata_value
+              lst_pointers.each do |matching_pointer|
+                if (!@crc_matching_files.has_key?(matching_pointer))
+                  @matching_files[matching_pointer] = MatchingIndexSinglePointer.new if (!@matching_files.has_key?(matching_pointer))
+                  @matching_files[matching_pointer].score += COEFF_SEGMENT_METADATA
+                  @matching_files[matching_pointer].segments_metadata[segment_ext] = {} if (!@matching_files[matching_pointer].segments_metadata.has_key?(segment_ext))
+                  @matching_files[matching_pointer].segments_metadata[segment_ext][metadata_key] = [] if (!@matching_files[matching_pointer].segments_metadata[segment_ext].has_key?(metadata_key))
+                  @matching_files[matching_pointer].segments_metadata[segment_ext][metadata_key] << metadata_value
                 end
+              end
+            end
+          end
+        end
+        # Find matching blocks' CRC sequences
+        lst_crc = (pointer.is_a?(FileInfo) ? pointer.crc_list : pointer.file_info.segments[pointer.idx_segment].crc_list)
+        @matching_files.each do |matching_pointer, matching_info|
+          if (matching_info.indexes.has_key?(:block_crc))
+            lst_common_crc = matching_info.indexes[:block_crc]
+            # Get the list of blocks' CRC from the file
+            lst_matching_crc = (matching_pointer.is_a?(FileInfo) ? matching_pointer.crc_list : matching_pointer.file_info.segments[matching_pointer.idx_segment].crc_list)
+            # Parse the original file and get to a matching CRC
+            idx_crc = 0
+            while (idx_crc < lst_crc.size)
+              while ((idx_crc < lst_crc.size) and
+                     (!lst_common_crc.include?(lst_crc[idx_crc])))
+                idx_crc += 1
+              end
+              if (idx_crc < lst_crc.size)
+                first_crc = lst_crc[idx_crc]
+                # We are at the beginning of a sequence in the original file.
+                smallest_sequence_size = lst_crc.size - idx_crc
+                # Find all the occurences of this sequence in the matching file.
+                lst_matching_crc.each_with_index do |matching_crc, idx_matching_crc|
+                  if (matching_crc == first_crc)
+                    # We are at the beginning of a sequence in the matching file
+                    idx_sequence = 1
+                    # Get the matching sequence
+                    matching_sequence = [first_crc]
+                    while ((idx_crc+idx_sequence < lst_crc.size) and
+                           (idx_matching_crc+idx_sequence < lst_matching_crc.size) and
+                           (lst_crc[idx_crc+idx_sequence] == lst_matching_crc[idx_matching_crc+idx_sequence]))
+                      matching_sequence << lst_crc[idx_crc+idx_sequence]
+                      idx_sequence += 1
+                    end
+                    if (matching_sequence.size > 1)
+                      # There is a matching sequence
+                      offset = idx_crc*FileInfo::CRC_BLOCK_SIZE
+                      matching_info.block_crc_sequences[offset] = {} if (!matching_info.block_crc_sequences.has_key?(offset))
+                      matching_info.block_crc_sequences[offset][idx_matching_crc*FileInfo::CRC_BLOCK_SIZE] = matching_sequence
+                      smallest_sequence_size = matching_sequence.size if (matching_sequence.size < smallest_sequence_size)
+                      # For each successful sequence, increase the score
+                      matching_info.score += (COEFF_BLOCK_CRC_SEQUENCE * matching_sequence.size)
+                    end
+                  end
+                end
+                idx_crc += smallest_sequence_size
               end
             end
           end

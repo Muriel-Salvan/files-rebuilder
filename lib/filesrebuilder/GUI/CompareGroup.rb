@@ -158,6 +158,19 @@ module FilesRebuilder
                 line[1] = lst_values.map { |value| value.inspect }.join(', ')
               end
             end
+            blocks_line = treestore.append(nil)
+            blocks_line[0] = "#{matching_info.block_crc_sequences.size} blocks sequences"
+            matching_info.block_crc_sequences.each do |offset, matching_data|
+              offset_line = treestore.append(blocks_line)
+              offset_line[0] = offset.to_s
+              offset_line[1] = "#{matching_data.size} matching sequences"
+              matching_data.each do |matching_offset, lst_crc|
+                segments_size = lst_crc.size * Model::FileInfo::CRC_BLOCK_SIZE
+                line = treestore.append(offset_line)
+                line[0] = "[#{offset} - #{offset+segments_size}] => [#{matching_offset} - #{matching_offset+segments_size}]"
+                line[1] = lst_crc.join(', ')
+              end
+            end
           end
         end
       end
@@ -296,7 +309,11 @@ module FilesRebuilder
                 nbr_metadata += lst_data.size
               end
             end
-            renderer.text = "Score: #{matching_info.score} - #{matching_info.indexes.map { |index_name, lst_data| (lst_data.size == 1) ? index_name.to_s : "#{index_name.to_s} (#{lst_data.size})" }.join(', ')} - #{nbr_metadata} metadata"
+            nbr_blocks_sequences = 0
+            matching_info.block_crc_sequences.each do |offset, sequences_data|
+              nbr_blocks_sequences += sequences_data.size
+            end
+            renderer.text = "Score: #{matching_info.score} - #{matching_info.indexes.map { |index_name, lst_data| (lst_data.size == 1) ? index_name.to_s : "#{index_name.to_s} (#{lst_data.size})" }.join(', ')} - #{nbr_metadata} metadata - #{nbr_blocks_sequences} matching sequential blocks"
           end
         end
 
