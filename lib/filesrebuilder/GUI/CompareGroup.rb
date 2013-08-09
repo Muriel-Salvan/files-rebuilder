@@ -16,10 +16,10 @@ module FilesRebuilder
       #    +- [ NODE_TYPE_DIR, DirInfo, index, MatchingSelection ] - Sub-directory being parsed
       #    +- [ NODE_TYPE_FILE, FileInfo, MatchingInfo ] - File belonging to this directory
       #       +- [ NODE_TYPE_CRC_MATCHING_FILE, pointer ] - Matching file
-      #       +- [ NODE_TYPE_MATCHING_FILE, pointer, MatchingIndexSinglePointer, MatchingSelection ] - Matching file
+      #       +- [ NODE_TYPE_MATCHING_FILE, pointer, MatchingIndexSinglePointer, MatchingSelection, score_max ] - Matching file
       #       +- [ NODE_TYPE_SEGMENT, SegmentPointer, MatchingInfo ] - Segment belonging to this file
       #          +- [ NODE_TYPE_CRC_MATCHING_FILE, pointer ] - Matching file
-      #          +- [ NODE_TYPE_MATCHING_FILE, pointer, MatchingIndexSinglePointer, MatchingSelection ] - Matching file
+      #          +- [ NODE_TYPE_MATCHING_FILE, pointer, MatchingIndexSinglePointer, MatchingSelection, score_max ] - Matching file
 
       def on_treeview_row_expanded(widget, tree_iter, tree_path)
         # If the only child has no data, it means it is a fake child, and we have to create real children
@@ -30,11 +30,12 @@ module FilesRebuilder
           case line_obj_info[0]
           when NODE_TYPE_DIR
             # Directory
+            score_min = score_min_to_display(widget.parent.parent.parent.parent)
             line_obj_info[1].sub_dirs.values.each do |child_dir_info|
-              add_obj_info(widget.model, tree_iter, child_dir_info, line_obj_info[2], line_obj_info[3])
+              add_obj_info(widget.model, tree_iter, child_dir_info, line_obj_info[2], line_obj_info[3], score_min)
             end
             line_obj_info[1].files.values.each do |child_file_info|
-              add_obj_info(widget.model, tree_iter, child_file_info, line_obj_info[2], line_obj_info[3])
+              add_obj_info(widget.model, tree_iter, child_file_info, line_obj_info[2], line_obj_info[3], score_min)
             end
           end
           # Delete the fake child (do it after inserting others otherwise expansion will be cancelled)
@@ -96,7 +97,7 @@ module FilesRebuilder
             end
           when NODE_TYPE_SEGMENT
             file_info = line_obj_info[1].file_info
-            segment = file_info.segments[file_info = line_obj_info[1].idx_segment]
+            segment = file_info.segments[line_obj_info[1].idx_segment]
             line = treestore.append(nil)
             line[0] = 'Extensions'
             line[1] = segment.extensions.join(', ')
@@ -138,7 +139,7 @@ module FilesRebuilder
             line[1] = (line_obj_info[3].matching_pointers[selected_item.parent[0][1]] == line_obj_info[1]).inspect
             line = treestore.append(nil)
             line[0] = 'Score'
-            line[1] = "#{matching_info.score} / #{matching_info.score_max}"
+            line[1] = "#{matching_info.score} / #{line_obj_info[4]}"
             indexes_line = treestore.append(nil)
             indexes_line[0] = "#{matching_info.indexes.size} indexes"
             matching_info.indexes.each do |index_name, lst_index_data|
@@ -183,11 +184,14 @@ module FilesRebuilder
       # * *index* (<em>Model::Index</em>): Index used to get matching files
       # * *matching_selection* (<em>Model::MatchingSelection</em>): Matching selection
       def set_dirs_to_compare(widget, lst_dirs, index, matching_selection)
+        spin_widget = get_score_min_spin(widget)
+        spin_widget.set_range(0, 100)
+        spin_widget.set_increments(1, 10)
 
         # Create the main TreeStore
         treestore = Gtk::TreeStore.new(Model::DirInfo)
         lst_dirs.each do |dir_name, dir_info|
-          add_obj_info(treestore, nil, dir_info, index, matching_selection)
+          add_obj_info(treestore, nil, dir_info, index, matching_selection, 0)
         end
         # Assign TreeStore to the view
         view = get_tree_view(widget)
@@ -313,7 +317,7 @@ module FilesRebuilder
             matching_info.block_crc_sequences.each do |offset, sequences_data|
               nbr_blocks_sequences += sequences_data.size
             end
-            renderer.text = "Score: #{matching_info.score}/#{matching_info.score_max} - #{matching_info.indexes.map { |index_name, lst_data| (lst_data.size == 1) ? index_name.to_s : "#{index_name.to_s} (#{lst_data.size})" }.join(', ')} - #{nbr_metadata} metadata - #{nbr_blocks_sequences} matching sequential blocks"
+            renderer.text = "#{(matching_info.score*100)/line_obj_info[4]}% - Score: #{matching_info.score}/#{line_obj_info[4]} - #{matching_info.indexes.map { |index_name, lst_data| (lst_data.size == 1) ? index_name.to_s : "#{index_name.to_s} (#{lst_data.size})" }.join(', ')} - #{nbr_metadata} metadata - #{nbr_blocks_sequences} matching sequential blocks"
           end
         end
 
@@ -338,12 +342,22 @@ module FilesRebuilder
 
       end
 
+      # Return the minimal score percentage to be displayed, as set in the spin widget
+      #
+      # Parameters::
+      # * *widget* (<em>Gtk::Widget</em>): The CompareGroup widget
+      # Result::
+      # * _Fixnum_: The minimal score
+      def score_min_to_display(widget)
+        return get_score_min_spin(widget).value
+      end
+
       private
 
       # Get the tree view
       #
       # Parameters::
-      # * *widget* (<em>Gtk::Widget</em>): The ShowDir widget
+      # * *widget* (<em>Gtk::Widget</em>): The CompareGroup widget
       def get_tree_view(widget)
         return widget.children[0].children[2].children[0].children[0]
       end
@@ -351,9 +365,17 @@ module FilesRebuilder
       # Get the details tree view
       #
       # Parameters::
-      # * *widget* (<em>Gtk::Widget</em>): The ShowDir widget
+      # * *widget* (<em>Gtk::Widget</em>): The CompareGroup widget
       def get_details_tree_view(widget)
         return widget.children[0].children[2].children[1].children[0].children[0].children[0]
+      end
+
+      # Get the score min spin
+      #
+      # Parameters::
+      # * *widget* (<em>Gtk::Widget</em>): The CompareGroup widget
+      def get_score_min_spin(widget)
+        return widget.children[0].children[1].children[0].children[1].children[0]
       end
 
       # Create items for a given object model in a treestore
@@ -364,7 +386,8 @@ module FilesRebuilder
       # * *obj_info* (_Object_): The model object to add to the treestore. Can be DirInfo, FileInfo or SegmentPointer.
       # * *index* (_Index_): The index used to get matching files
       # * *matching_selection* (_MatchingSelection_): The matching selection
-      def add_obj_info(treestore, parent_elem, obj_info, index, matching_selection)
+      # * *score_min* (_Fixnum_): The minimal score percentage to be displayed
+      def add_obj_info(treestore, parent_elem, obj_info, index, matching_selection, score_min)
         new_elem = treestore.append(parent_elem)
         has_children = false
         case
@@ -381,14 +404,15 @@ module FilesRebuilder
             treestore.append(new_elem)[0] = [ NODE_TYPE_CRC_MATCHING_FILE, pointer ]
           end
           # Create all the matching elements, sorted by decreasing score
+          score_max = Model::MatchingInfo.compute_score_max(obj_info)
           matching_info.matching_files.sort_by { |pointer, matching_file_info| matching_file_info.score }.reverse_each do |pointer, matching_file_info|
-            treestore.append(new_elem)[0] = [ NODE_TYPE_MATCHING_FILE, pointer, matching_file_info, matching_selection ]
+            treestore.append(new_elem)[0] = [ NODE_TYPE_MATCHING_FILE, pointer, matching_file_info, matching_selection, score_max ] if ((score_min == 0) or ((matching_file_info.score*100)/score_max >= score_min))
           end
           # Create sub-segments if need be
           if ((obj_info.is_a?(Model::FileInfo)) and
               (obj_info.segments.size > 1))
             obj_info.segments.size.times do |idx_segment|
-              add_obj_info(treestore, new_elem, Model::SegmentPointer.new(obj_info, idx_segment), index, matching_selection)
+              add_obj_info(treestore, new_elem, Model::SegmentPointer.new(obj_info, idx_segment), index, matching_selection, score_min)
             end
           end
         else

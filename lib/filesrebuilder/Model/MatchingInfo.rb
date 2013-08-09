@@ -74,21 +74,8 @@ module FilesRebuilder
             end
           end
         end
-        # Compute the maximal score
-        file_info = (pointer.is_a?(FileInfo) ? pointer : pointer.file_info)
-        lst_crc = (pointer.is_a?(FileInfo) ? pointer.crc_list : pointer.file_info.segments[pointer.idx_segment].crc_list)
-        score_max = 0
-        lst_index_names = [ :base_name, :size, :date ]
-        lst_index_names << :ext if (!File.extname(file_info.base_name).empty?)
-        lst_index_names.each do |index_name|
-          score_max += COEFFS[index_name]
-        end
-        score_max += (COEFF_BLOCK_CRC_SEQUENCE + COEFFS[:block_crc]) * lst_crc.size
-        score_max += COEFFS[:segment_ext] * (pointer.is_a?(FileInfo) ? pointer.segments.size : 1)
-        (pointer.is_a?(FileInfo) ? pointer.segments : [ pointer.file_info.segments[pointer.idx_segment] ]).each do |segment|
-          score_max += COEFF_SEGMENT_METADATA * segment.metadata.size
-        end
         # Find matching blocks' CRC sequences
+        lst_crc = (pointer.is_a?(FileInfo) ? pointer.crc_list : pointer.file_info.segments[pointer.idx_segment].crc_list)
         @matching_files.each do |matching_pointer, matching_info|
           if (matching_info.indexes.has_key?(:block_crc))
             lst_common_crc = matching_info.indexes[:block_crc]
@@ -133,9 +120,31 @@ module FilesRebuilder
               end
             end
           end
-          matching_info.score_max = score_max
+        end
+      end
+
+      # Compute the maximal score matching a given pointer could get
+      #
+      # Parameters::
+      # * *pointer* (_FileInfo_ or _SegmentPointer_): The pointer to compute the maximal score for
+      # Result::
+      # * _Fixnum_: The maximal score
+      def self.compute_score_max(pointer)
+        file_info = (pointer.is_a?(FileInfo) ? pointer : pointer.file_info)
+        score_max = 0
+        lst_index_names = [ :base_name, :size, :date ]
+        lst_index_names << :ext if (!File.extname(file_info.base_name).empty?)
+        lst_index_names.each do |index_name|
+          score_max += COEFFS[index_name]
+        end
+        lst_crc = (pointer.is_a?(FileInfo) ? pointer.crc_list : pointer.file_info.segments[pointer.idx_segment].crc_list)
+        score_max += (COEFF_BLOCK_CRC_SEQUENCE + COEFFS[:block_crc]) * lst_crc.size
+        score_max += COEFFS[:segment_ext] * (pointer.is_a?(FileInfo) ? pointer.segments.size : 1)
+        (pointer.is_a?(FileInfo) ? pointer.segments : [ pointer.file_info.segments[pointer.idx_segment] ]).each do |segment|
+          score_max += COEFF_SEGMENT_METADATA * segment.metadata.size
         end
 
+        return score_max
       end
 
     end
