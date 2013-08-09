@@ -26,7 +26,7 @@ module FilesRebuilder
               segment_index = obj_info.idx_segment
             end
             # File
-            src_matching_index, dst_matching_index = @gui_controller.get_matching_file_info(file_info, segment_index)
+            src_matching_index, dst_matching_index = @gui_controller.get_matching_indexes(file_info, segment_index)
             if (!src_matching_index.empty?)
               new_elem_indexes = widget.model.append(tree_iter)
               new_elem_indexes[0] = 'Matching recovered files'

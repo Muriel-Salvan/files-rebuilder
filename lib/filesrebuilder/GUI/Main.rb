@@ -101,6 +101,14 @@ module FilesRebuilder
         @gui_controller.exit
       end
 
+      def on_compare_dest_button_clicked
+        @gui_controller.compare_groups(false)
+      end
+
+      def on_compare_src_button_clicked
+        @gui_controller.compare_groups(true)
+      end
+
       # Set the title of the main window
       #
       # Parameters::

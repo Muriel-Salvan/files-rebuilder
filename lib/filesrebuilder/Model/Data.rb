@@ -17,7 +17,7 @@ module FilesRebuilder
       # Constructor
       def initialize
         # Flat directories info
-        @dirs_info = DirInfo.new
+        @dirs_info = DirInfo.new(nil)
         # Indexes
         @src_indexes = Index.new
         @dst_indexes = Index.new
@@ -76,8 +76,7 @@ module FilesRebuilder
         @global_mutex.synchronize do
           subdir_info = dir_info.sub_dirs[dir_base_name]
           if (subdir_info == nil)
-            subdir_info = DirInfo.new
-            subdir_info.base_name = dir_base_name
+            subdir_info = DirInfo.new(dir_base_name, dir_info)
             dir_info.sub_dirs[dir_base_name] = subdir_info
           end
         end
@@ -98,8 +97,7 @@ module FilesRebuilder
         @global_mutex.synchronize do
           file_info = dir_info.files[file_base_name]
           if (file_info == nil)
-            file_info = FileInfo.new
-            file_info.base_name = file_base_name
+            file_info = FileInfo.new(file_base_name, dir_info)
             dir_info.files[file_base_name] = file_info
           end
         end
@@ -171,10 +169,7 @@ module FilesRebuilder
         dir_info = @dirs_info
 
         dir_name.split(FILE_SEPARATOR_REGEXP).each do |dir_base_name|
-          if (dir_info.sub_dirs[dir_base_name] == nil)
-            dir_info.sub_dirs[dir_base_name] = Model::DirInfo.new
-            dir_info.sub_dirs[dir_base_name].base_name = dir_base_name
-          end
+          dir_info.sub_dirs[dir_base_name] = Model::DirInfo.new(dir_base_name, dir_info) if (dir_info.sub_dirs[dir_base_name] == nil)
           dir_info = dir_info.sub_dirs[dir_base_name]
         end
 

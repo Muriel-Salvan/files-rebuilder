@@ -148,7 +148,7 @@ module FilesRebuilder
       # * *segment_index* (_Fixnum_): Segment index in this file info. Set to nil to consider all segments. [default = nil]
       # Result::
       # * _MatchingIndex_: The index info, containing only matching files
-      def get_matching_file_info(file_info, segment_index = nil)
+      def get_matching_index(file_info, segment_index = nil)
         result = MatchingIndex.new
 
         segment_pointer = SegmentPointer.new(file_info, segment_index)

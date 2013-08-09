@@ -9,7 +9,11 @@ module FilesRebuilder
 
       # Directory base name
       #   String
-      attr_accessor :base_name
+      attr_reader :base_name
+
+      # Parent directory
+      #   DirInfo
+      attr_reader :parent_dir
 
       # Data scan of each sub-directory
       #   map< dir_base_name, dir_info >
@@ -22,9 +26,23 @@ module FilesRebuilder
       attr_reader :files
 
       # Constructor
-      def initialize
+      #
+      # Parameters::
+      # * *base_name* (_String_): Directory base name
+      # * *parent_dir* (_DirInfo_): Parent DirInfo, or nil if none [default = nil]
+      def initialize(base_name, parent_dir = nil)
+        @base_name = base_name
+        @parent_dir = parent_dir
         @sub_dirs = {}
         @files = {}
+      end
+
+      # Get the absolute dir name
+      #
+      # Result::
+      # * _String_: The absolute dir name
+      def get_absolute_name
+        return "#{(parent_dir == nil) ? '' : parent_dir.get_absolute_name}/#{base_name}"
       end
 
     end

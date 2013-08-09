@@ -28,7 +28,11 @@ module FilesRebuilder
 
       # File base name
       #   String
-      attr_accessor :base_name
+      attr_reader :base_name
+
+      # Parent directory
+      #   DirInfo
+      attr_reader :parent_dir
 
       # Whether the info was filled or not
       #   Boolean
@@ -51,7 +55,13 @@ module FilesRebuilder
       attr_accessor :segments
 
       # Constructor
-      def initialize
+      #
+      # Parameters::
+      # * *base_name* (_String_): File base name
+      # * *parent_dir* (_DirInfo_): Parent DirInfo
+      def initialize(base_name, parent_dir)
+        @base_name = base_name
+        @parent_dir = parent_dir
         @filled = false
       end
 
@@ -61,6 +71,14 @@ module FilesRebuilder
       # * _String_: The CRC
       def get_crc
         return Zlib.crc32(@crc_list.join(''), 0).to_s(16).upcase
+      end
+
+      # Get the absolute file name
+      #
+      # Result::
+      # * _String_: The absolute file name
+      def get_absolute_name
+        return "#{parent_dir.get_absolute_name}/#{base_name}"
       end
 
     end

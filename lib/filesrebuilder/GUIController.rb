@@ -1,3 +1,4 @@
+require 'filesrebuilder/Model/MatchingInfo'
 require 'zlib'
 
 module FilesRebuilder
@@ -321,7 +322,7 @@ module FilesRebuilder
       end
     end
 
-    # Get matching file info for a given file info.
+    # Get matching indexes for a given file info.
     # This is done by looking at indexes.
     #
     # Parameters::
@@ -330,8 +331,57 @@ module FilesRebuilder
     # Result::
     # * _MatchingIndex_: The source index info, containing only matching files
     # * _MatchingIndex_: The destination index info, containing only matching files
-    def get_matching_file_info(file_info, segment_index = nil)
-      return @data.src_indexes.get_matching_file_info(file_info, segment_index), @data.dst_indexes.get_matching_file_info(file_info, segment_index)
+    def get_matching_indexes(file_info, segment_index = nil)
+      return @data.src_indexes.get_matching_index(file_info, segment_index), @data.dst_indexes.get_matching_index(file_info, segment_index)
+    end
+
+    # Compare groups of source and destination directories
+    #
+    # Parameters::
+    # * *src_reference* (_Boolean_): Is source group the reference?
+    def compare_groups(src_reference)
+      # Get the list of directories to compare
+      # list< [ absolute_dir_name, dir_info ] >
+      lst_dirs = []
+      index = nil
+      main_handler = @gui_factory.get_gui_handler('Main')
+      dirline_handler = @gui_factory.get_gui_handler('DirLine')
+      if src_reference
+        main_handler.get_src_dirlines(@main_widget).each do |dirline|
+          dir_name = dirline_handler.get_dir_name(dirline)
+          lst_dirs << [ dir_name, @data.dir_info(dir_name) ]
+        end
+        index = @data.dst_indexes
+      else
+        main_handler.get_dest_dirlines(@main_widget).each do |dirline|
+          dir_name = dirline_handler.get_dir_name(dirline)
+          lst_dirs << [ dir_name, @data.dir_info(dir_name) ]
+        end
+        index = @data.src_indexes
+      end
+      # Display CompareGroup window
+      new_widget = @gui_factory.new_widget('CompareGroup')
+      compare_group_handler = @gui_factory.get_gui_handler('CompareGroup')
+      compare_group_handler.set_dirs_to_compare(new_widget, lst_dirs, index)
+      new_widget.show
+    end
+
+    # Get the MatchingInfo object, recaping every matching file for a given pointer
+    #
+    # Parameters::
+    # * *pointer* (_FileInfo_ or _SegmentPointer_): The file or segment we want matches for
+    # * *index* (_Index_): Index of the data to be looked up for matching files
+    # Result::
+    # * _MatchingInfo_: The resulting MatchingInfo
+    def get_matching_info(pointer, index)
+      file_info = pointer
+      idx_segment = nil
+      if (pointer.is_a?(Model::SegmentPointer))
+        file_info = pointer.file_info
+        idx_segment = pointer.idx_segment
+      end
+      # Create the index subset, matching our pointer then use it to find matching files
+      return Model::MatchingInfo.new(index.get_matching_index(file_info, idx_segment))
     end
 
     private
