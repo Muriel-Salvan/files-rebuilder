@@ -163,7 +163,7 @@ module FilesRebuilder
           indexes_lookup_data[:crc] = [ file_info.get_crc ]
           indexes_lookup_data[:size] = [ file_info.size ]
           indexes_lookup_data[:block_crc] = file_info.crc_list
-          indexes_lookup_data[:segment_ext] = file_info.segments.map { |segment| segment.extensions }
+          indexes_lookup_data[:segment_ext] = [ file_info.segments[0].extensions ]
         elsif (segment_index == nil)
           indexes_lookup_data[:crc] = [ file_info.get_crc ]
           indexes_lookup_data[:size] = [ file_info.size ]

@@ -138,7 +138,7 @@ module FilesRebuilder
             line[1] = (line_obj_info[3].matching_pointers[selected_item.parent[0][1]] == line_obj_info[1]).inspect
             line = treestore.append(nil)
             line[0] = 'Score'
-            line[1] = matching_info.score.to_s
+            line[1] = "#{matching_info.score} / #{matching_info.score_max}"
             indexes_line = treestore.append(nil)
             indexes_line[0] = "#{matching_info.indexes.size} indexes"
             matching_info.indexes.each do |index_name, lst_index_data|
@@ -313,7 +313,7 @@ module FilesRebuilder
             matching_info.block_crc_sequences.each do |offset, sequences_data|
               nbr_blocks_sequences += sequences_data.size
             end
-            renderer.text = "Score: #{matching_info.score} - #{matching_info.indexes.map { |index_name, lst_data| (lst_data.size == 1) ? index_name.to_s : "#{index_name.to_s} (#{lst_data.size})" }.join(', ')} - #{nbr_metadata} metadata - #{nbr_blocks_sequences} matching sequential blocks"
+            renderer.text = "Score: #{matching_info.score}/#{matching_info.score_max} - #{matching_info.indexes.map { |index_name, lst_data| (lst_data.size == 1) ? index_name.to_s : "#{index_name.to_s} (#{lst_data.size})" }.join(', ')} - #{nbr_metadata} metadata - #{nbr_blocks_sequences} matching sequential blocks"
           end
         end
 
