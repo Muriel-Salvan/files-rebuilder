@@ -13,7 +13,7 @@ module FilesRebuilder
       @class_name = self.class.name.split('::')[-1]
       # Load the Glade content in memory to avoid disk IOs each time we ask for a new widget
       @glade_content = nil
-      File.open("#{File.dirname(__FILE__)}/GUI/#{@class_name}.glade", 'r') do |file|
+      File.open("#{File.dirname(__FILE__)}/GUI/#{self.class.name.split('::')[2..-1].join('/')}.glade", 'r') do |file|
         @glade_content = file.read
       end
     end

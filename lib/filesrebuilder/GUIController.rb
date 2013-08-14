@@ -387,6 +387,94 @@ module FilesRebuilder
       return Model::MatchingInfo.new(index.get_matching_index(file_info, idx_segment), pointer)
     end
 
+    # Display a pointer comparator
+    #
+    # Parameters::
+    # * *pointer* (_FileInfo_ or _SegmentPointer_): Pointer to be compared
+    # * *matching_info* (_MatchingInfo_): Matching information of all files matching this pointer
+    # * *matching_selection* (_MatchingSelection_): Current user selection of matching files
+    def display_pointer_comparator(pointer, matching_info, matching_selection)
+      # Display ComparePointer window
+      new_widget = @gui_factory.new_widget('ComparePointer')
+      compare_pointer_handler = @gui_factory.get_gui_handler('ComparePointer')
+      compare_pointer_handler.set_pointer_to_compare(new_widget, pointer, matching_info, matching_selection)
+      new_widget.show
+    end
+
+    # Create a widget to be used to display a pointer
+    #
+    # Parameters::
+    # * *pointer* (_FileInfo_ or _SegmentPointer_): Pointer to be displayed
+    # Result::
+    # * <em>Gtk::Widget</em>: The corresponding widget
+    def create_widget_for_pointer(pointer)
+      # Get the extensions
+      if pointer.is_a?(Model::FileInfo)
+        if (pointer.segments.size > 1)
+          extension = :unknown
+        else
+          extension = pointer.segments[0].extensions[0]
+        end
+      else
+        extension = pointer.file_info.segments[pointer.idx_segment].extensions[0]
+      end
+      # Check that this GUI component exists, otherwise switch back to :unknown
+      str_extension = extension.to_s
+      gui_name = "#{str_extension[0].upcase}#{str_extension[1..-1]}"
+      if (!File.exist?("#{File.dirname(__FILE__)}/GUI/DisplayFile/#{gui_name}.rb"))
+        log_info "No GUI to display files of extension #{gui_name}."
+        gui_name = 'Unknown'
+      end
+      gui_id = "DisplayFile/#{gui_name}"
+      new_widget = @gui_factory.new_widget(gui_id)
+      # Initialize the widget with the pointer's content
+      widget_handler = @gui_factory.get_gui_handler(gui_id)
+      if pointer.is_a?(Model::FileInfo)
+        file_name = pointer.get_absolute_name
+        File.open(file_name, 'rb') do |file|
+          widget_handler.init_with_data(new_widget, pointer, IOBlockReader::init(file, :block_size => Model::FileInfo::CRC_BLOCK_SIZE), 0, File.size(file_name))
+        end
+      else
+        file_name = pointer.file_info.get_absolute_name
+        segment = pointer.file_info.segments[pointer.idx_segment]
+        File.open(file_name, 'rb') do |file|
+          widget_handler.init_with_data(new_widget, pointer, IOBlockReader::init(file, :block_size => Model::FileInfo::CRC_BLOCK_SIZE), segment.begin_offset, segment.end_offset)
+        end
+      end
+
+      return new_widget
+    end
+
+    # Create a widget to be used to display a matching pointer
+    #
+    # Parameters::
+    # * *pointer* (_FileInfo_ or _SegmentPointer_): Pointer to be displayed
+    # * *selected* (_Boolean_): Is this matching pointer selected?
+    # Result::
+    # * <em>Gtk::Widget</em>: The corresponding widget
+    def create_widget_for_matching_pointer(pointer, selected)
+      error = nil
+      begin
+        pointer_widget = create_widget_for_pointer(pointer)
+      rescue
+        error = $!.to_s
+      end
+      new_widget = @gui_factory.new_widget('DisplayMatchingPointer')
+      widget_handler = @gui_factory.get_gui_handler('DisplayMatchingPointer')
+      pointer_name = (pointer.is_a?(Model::FileInfo) ? pointer.get_absolute_name : "#{pointer.file_info.get_absolute_name} ##{pointer.idx_segment} (#{pointer.file_info.segments[pointer.idx_segment].extensions.join(', ')})")
+      if (error == nil)
+        widget_handler.set_pointer_widget(new_widget, pointer_widget)
+        widget_handler.set_name(new_widget, pointer_name)
+      else
+        widget_handler.set_name(new_widget, "!!! ERROR: #{error}. #{pointer_name}")
+      end
+      # Add indication in the case this matching pointer is selected
+      widget_handler.set_selected(new_widget, selected)
+      new_widget.user_data = pointer
+
+      return new_widget
+    end
+
     private
 
     # Print a number of seconds in a human-friendly way

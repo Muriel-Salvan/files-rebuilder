@@ -12,14 +12,14 @@ module FilesRebuilder
       NODE_TYPE_MATCHING_FILE = 4
 
       # The main tree view contains items that are organized this way:
-      # +- [ NODE_TYPE_DIR, DirInfo, index, MatchingSelection ] - Directory being parsed
-      #    +- [ NODE_TYPE_DIR, DirInfo, index, MatchingSelection ] - Sub-directory being parsed
+      # +- [ NODE_TYPE_DIR, DirInfo, index ] - Directory being parsed
+      #    +- [ NODE_TYPE_DIR, DirInfo, index ] - Sub-directory being parsed
       #    +- [ NODE_TYPE_FILE, FileInfo, MatchingInfo ] - File belonging to this directory
       #       +- [ NODE_TYPE_CRC_MATCHING_FILE, pointer ] - Matching file
-      #       +- [ NODE_TYPE_MATCHING_FILE, pointer, MatchingIndexSinglePointer, MatchingSelection, score_max ] - Matching file
+      #       +- [ NODE_TYPE_MATCHING_FILE, pointer, MatchingIndexSinglePointer, score_max ] - Matching file
       #       +- [ NODE_TYPE_SEGMENT, SegmentPointer, MatchingInfo ] - Segment belonging to this file
       #          +- [ NODE_TYPE_CRC_MATCHING_FILE, pointer ] - Matching file
-      #          +- [ NODE_TYPE_MATCHING_FILE, pointer, MatchingIndexSinglePointer, MatchingSelection, score_max ] - Matching file
+      #          +- [ NODE_TYPE_MATCHING_FILE, pointer, MatchingIndexSinglePointer, score_max ] - Matching file
 
       def on_treeview_row_expanded(widget, tree_iter, tree_path)
         # If the only child has no data, it means it is a fake child, and we have to create real children
@@ -30,12 +30,14 @@ module FilesRebuilder
           case line_obj_info[0]
           when NODE_TYPE_DIR
             # Directory
-            score_min = score_min_to_display(widget.parent.parent.parent.parent)
+            root_widget = widget.parent.parent.parent.parent
+            matching_selection = root_widget.user_data[:matching_selection]
+            score_min = score_min_to_display(root_widget)
             line_obj_info[1].sub_dirs.values.each do |child_dir_info|
-              add_obj_info(widget.model, tree_iter, child_dir_info, line_obj_info[2], line_obj_info[3], score_min)
+              add_obj_info(widget.model, tree_iter, child_dir_info, line_obj_info[2], matching_selection, score_min)
             end
             line_obj_info[1].files.values.each do |child_file_info|
-              add_obj_info(widget.model, tree_iter, child_file_info, line_obj_info[2], line_obj_info[3], score_min)
+              add_obj_info(widget.model, tree_iter, child_file_info, line_obj_info[2], matching_selection, score_min)
             end
           end
           # Delete the fake child (do it after inserting others otherwise expansion will be cancelled)
@@ -46,7 +48,8 @@ module FilesRebuilder
       def on_treeview_cursor_changed(widget)
         # Get the selected TreeIter
         selected_item = widget.selection.selected
-        treestore = get_details_tree_view(widget.parent.parent.parent.parent).model
+        root_widget = widget.parent.parent.parent.parent
+        treestore = get_details_tree_view(root_widget).model
         treestore.clear
         if (selected_item != nil)
           line_obj_info = selected_item[0]
@@ -136,10 +139,10 @@ module FilesRebuilder
             matching_info = line_obj_info[2]
             line = treestore.append(nil)
             line[0] = 'Selected?'
-            line[1] = (line_obj_info[3].matching_pointers[selected_item.parent[0][1]] == line_obj_info[1]).inspect
+            line[1] = (root_widget.user_data[:matching_selection].matching_pointers[selected_item.parent[0][1]] == line_obj_info[1]).inspect
             line = treestore.append(nil)
             line[0] = 'Score'
-            line[1] = "#{matching_info.score} / #{line_obj_info[4]}"
+            line[1] = "#{matching_info.score} / #{line_obj_info[3]}"
             indexes_line = treestore.append(nil)
             indexes_line[0] = "#{matching_info.indexes.size} indexes"
             matching_info.indexes.each do |index_name, lst_index_data|
@@ -176,6 +179,17 @@ module FilesRebuilder
         end
       end
 
+      def on_treeview_row_activated(widget, tree_iter, view_column)
+        selected_item = widget.selection.selected
+        if (selected_item != nil)
+          line_obj_info = selected_item[0]
+          case line_obj_info[0]
+          when NODE_TYPE_FILE, NODE_TYPE_SEGMENT
+            @gui_controller.display_pointer_comparator(line_obj_info[1], line_obj_info[2], widget.parent.parent.parent.parent.user_data[:matching_selection])
+          end
+        end
+      end
+
       # Set the directory to be displayed
       #
       # Parameters::
@@ -187,6 +201,10 @@ module FilesRebuilder
         spin_widget = get_score_min_spin(widget)
         spin_widget.set_range(0, 100)
         spin_widget.set_increments(1, 10)
+
+        widget.user_data = {
+          :matching_selection => matching_selection
+        }
 
         # Create the main TreeStore
         treestore = Gtk::TreeStore.new(Model::DirInfo)
@@ -209,7 +227,7 @@ module FilesRebuilder
           when NODE_TYPE_DIR
             renderer.stock_id = Gtk::Stock::DIRECTORY
           when NODE_TYPE_FILE
-            renderer.stock_id = Gtk::Stock::FILE
+            renderer.stock_id = (matching_selection.matching_pointers.has_key?(line_obj_info[1]) ? Gtk::Stock::APPLY : Gtk::Stock::FILE)
           when NODE_TYPE_SEGMENT
             renderer.stock_id = Gtk::Stock::INDEX
           when NODE_TYPE_CRC_MATCHING_FILE
@@ -255,7 +273,7 @@ module FilesRebuilder
               renderer.text = "#{line_obj_info[1].file_info.get_absolute_name} ##{line_obj_info[1].idx_segment}"
             end
             renderer.foreground_set = false
-            renderer.weight = (line_obj_info[3].matching_pointers[iter.parent[0][1]] == line_obj_info[1]) ? Pango::WEIGHT_BOLD : Pango::WEIGHT_NORMAL
+            renderer.weight = (matching_selection.matching_pointers[iter.parent[0][1]] == line_obj_info[1]) ? Pango::WEIGHT_BOLD : Pango::WEIGHT_NORMAL
           end
         end
         # == Selection ==
@@ -266,9 +284,13 @@ module FilesRebuilder
         cell_renderer_selection.radio = true
         view_column_selection.set_cell_data_func(cell_renderer_selection) do |column, renderer, model, iter|
           line_obj_info = iter[0]
-          if (line_obj_info[0] == NODE_TYPE_MATCHING_FILE)
+          case line_obj_info[0]
+          when NODE_TYPE_MATCHING_FILE
             renderer.visible = true
-            renderer.active = (line_obj_info[3].matching_pointers[iter.parent[0][1]] == line_obj_info[1])
+            renderer.active = (matching_selection.matching_pointers[iter.parent[0][1]] == line_obj_info[1])
+          when NODE_TYPE_FILE, NODE_TYPE_SEGMENT
+            renderer.visible = !line_obj_info[2].matching_files.empty?
+            renderer.active = (matching_selection.matching_pointers[line_obj_info[1]] == line_obj_info[1])
           else
             renderer.visible = false
             renderer.active = false
@@ -278,14 +300,23 @@ module FilesRebuilder
           iter = treestore.get_iter(path)
           if (iter != nil)
             line_obj_info = iter[0]
-            if (line_obj_info[0] == NODE_TYPE_MATCHING_FILE)
-              matching_pointers = line_obj_info[3].matching_pointers
+            case line_obj_info[0]
+            when NODE_TYPE_MATCHING_FILE
+              matching_pointers = matching_selection.matching_pointers
               pointer = iter.parent[0][1]
               matching_pointer = line_obj_info[1]
               if (matching_pointers[pointer] == matching_pointer)
                 matching_pointers.delete(pointer)
               else
                 matching_pointers[pointer] = matching_pointer
+              end
+            when NODE_TYPE_FILE, NODE_TYPE_SEGMENT
+              matching_pointers = matching_selection.matching_pointers
+              pointer = line_obj_info[1]
+              if (matching_pointers[pointer] == pointer)
+                matching_pointers.delete(pointer)
+              else
+                matching_pointers[pointer] = pointer
               end
             end
           end
@@ -317,7 +348,7 @@ module FilesRebuilder
             matching_info.block_crc_sequences.each do |offset, sequences_data|
               nbr_blocks_sequences += sequences_data.size
             end
-            renderer.text = "#{(matching_info.score*100)/line_obj_info[4]}% - Score: #{matching_info.score}/#{line_obj_info[4]} - #{matching_info.indexes.map { |index_name, lst_data| (lst_data.size == 1) ? index_name.to_s : "#{index_name.to_s} (#{lst_data.size})" }.join(', ')} - #{nbr_metadata} metadata - #{nbr_blocks_sequences} matching sequential blocks"
+            renderer.text = "#{(matching_info.score*100)/line_obj_info[3]}% - Score: #{matching_info.score}/#{line_obj_info[3]} - #{matching_info.indexes.map { |index_name, lst_data| (lst_data.size == 1) ? index_name.to_s : "#{index_name.to_s} (#{lst_data.size})" }.join(', ')} - #{nbr_metadata} metadata - #{nbr_blocks_sequences} matching sequential blocks"
           end
         end
 
@@ -392,7 +423,7 @@ module FilesRebuilder
         has_children = false
         case
         when (obj_info.class == Model::DirInfo)
-          new_elem[0] = [ NODE_TYPE_DIR, obj_info, index, matching_selection ]
+          new_elem[0] = [ NODE_TYPE_DIR, obj_info, index ]
           has_children = ((!obj_info.sub_dirs.empty?) or (!obj_info.files.empty?))
         when ((obj_info.class == Model::FileInfo) or (obj_info.class == Model::SegmentPointer))
           # Get the MatchingInfo
@@ -406,7 +437,7 @@ module FilesRebuilder
           # Create all the matching elements, sorted by decreasing score
           score_max = Model::MatchingInfo.compute_score_max(obj_info)
           matching_info.matching_files.sort_by { |pointer, matching_file_info| matching_file_info.score }.reverse_each do |pointer, matching_file_info|
-            treestore.append(new_elem)[0] = [ NODE_TYPE_MATCHING_FILE, pointer, matching_file_info, matching_selection, score_max ] if ((score_min == 0) or ((matching_file_info.score*100)/score_max >= score_min))
+            treestore.append(new_elem)[0] = [ NODE_TYPE_MATCHING_FILE, pointer, matching_file_info, score_max ] if ((score_min == 0) or ((matching_file_info.score*100)/score_max >= score_min))
           end
           # Create sub-segments if need be
           if ((obj_info.is_a?(Model::FileInfo)) and

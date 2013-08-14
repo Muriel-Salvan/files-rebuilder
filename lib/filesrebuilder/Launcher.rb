@@ -43,6 +43,7 @@ module FilesRebuilder
         require 'filesrebuilder/Model/Data'
         require 'filesrebuilder/GUIFactory'
         require 'filesrebuilder/GUIcontroller'
+        require 'filesrebuilder/_Gtk/_object'
         gui_factory = GUIFactory.new
         gui_controller = GUIController.new(gui_factory)
         gui_factory.gui_controller = gui_controller

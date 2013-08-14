@@ -26,7 +26,7 @@ module FilesRebuilder
     def get_gui_handler(gui_id)
       if (@gui_handlers[gui_id] == nil)
         require "filesrebuilder/GUI/#{gui_id}"
-        @gui_handlers[gui_id] = eval("FilesRebuilder::GUI::#{gui_id}").new(self, @gui_controller)
+        @gui_handlers[gui_id] = eval("FilesRebuilder::GUI::#{gui_id.gsub('/', '::')}").new(self, @gui_controller)
       end
       return @gui_handlers[gui_id]
     end

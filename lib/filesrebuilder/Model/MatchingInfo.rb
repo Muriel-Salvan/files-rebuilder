@@ -15,9 +15,9 @@ module FilesRebuilder
         :date => 6,
         :ext => 2,
         :block_crc => 2,
-        :segment_ext => 2
+        :segment_ext => 8
       }
-      COEFF_SEGMENT_METADATA = 1
+      COEFF_SEGMENT_METADATA = 2
       COEFF_BLOCK_CRC_SEQUENCE = 4
 
       # CRC Matching files

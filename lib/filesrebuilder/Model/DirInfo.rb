@@ -42,7 +42,7 @@ module FilesRebuilder
       # Result::
       # * _String_: The absolute dir name
       def get_absolute_name
-        return "#{(parent_dir == nil) ? '' : parent_dir.get_absolute_name}/#{base_name}"
+        return (parent_dir.base_name == nil) ? base_name : "#{parent_dir.get_absolute_name}/#{base_name}"
       end
 
     end
