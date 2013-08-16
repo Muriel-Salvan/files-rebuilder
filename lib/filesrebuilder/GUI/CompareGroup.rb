@@ -49,12 +49,16 @@ module FilesRebuilder
         # Get the selected TreeIter
         selected_item = widget.selection.selected
         root_widget = widget.parent.parent.parent.parent
+        open_button = get_open_button(root_widget)
+        compare_button = get_compare_button(root_widget)
         treestore = get_details_tree_view(root_widget).model
         treestore.clear
         if (selected_item != nil)
           line_obj_info = selected_item[0]
           case line_obj_info[0]
           when NODE_TYPE_DIR
+            open_button.sensitive = false
+            compare_button.sensitive = false
             dir_info = line_obj_info[1]
             line = treestore.append(nil)
             line[0] = 'Number of files'
@@ -64,6 +68,9 @@ module FilesRebuilder
             line[1] = dir_info.sub_dirs.size.to_s
           when NODE_TYPE_FILE
             file_info = line_obj_info[1]
+            open_button.user_data = file_info
+            open_button.sensitive = true
+            compare_button.sensitive = true
             if (file_info.filled)
               line = treestore.append(nil)
               line[0] = 'Already scanned?'
@@ -100,7 +107,10 @@ module FilesRebuilder
             end
           when NODE_TYPE_SEGMENT
             file_info = line_obj_info[1].file_info
-            segment = file_info.segments[line_obj_info[1].idx_segment]
+            segment = line_obj_info[1].segment
+            open_button.user_data = segment
+            open_button.sensitive = true
+            compare_button.sensitive = true
             line = treestore.append(nil)
             line[0] = 'Extensions'
             line[1] = segment.extensions.join(', ')
@@ -137,6 +147,9 @@ module FilesRebuilder
             end
           when NODE_TYPE_MATCHING_FILE
             matching_info = line_obj_info[2]
+            open_button.user_data = line_obj_info[1]
+            open_button.sensitive = true
+            compare_button.sensitive = false
             line = treestore.append(nil)
             line[0] = 'Selected?'
             line[1] = (root_widget.user_data[:matching_selection].matching_pointers[selected_item.parent[0][1]] == line_obj_info[1]).inspect
@@ -180,14 +193,15 @@ module FilesRebuilder
       end
 
       def on_treeview_row_activated(widget, tree_iter, view_column)
-        selected_item = widget.selection.selected
-        if (selected_item != nil)
-          line_obj_info = selected_item[0]
-          case line_obj_info[0]
-          when NODE_TYPE_FILE, NODE_TYPE_SEGMENT
-            @gui_controller.display_pointer_comparator(line_obj_info[1], line_obj_info[2], widget.parent.parent.parent.parent.user_data[:matching_selection])
-          end
-        end
+        compare_currently_selected_item(widget.parent.parent.parent.parent)
+      end
+
+      def on_open_button_clicked(button_widget)
+        @gui_controller.open_external(button_widget.user_data)
+      end
+
+      def on_compare_button_clicked(button_widget)
+        compare_currently_selected_item(button_widget.parent.parent.parent.parent.parent)
       end
 
       # Set the directory to be displayed
@@ -389,6 +403,8 @@ module FilesRebuilder
       #
       # Parameters::
       # * *widget* (<em>Gtk::Widget</em>): The CompareGroup widget
+      # Result::
+      # * (<em>Gtk::Widget</em>): The wanted widget
       def get_tree_view(widget)
         return widget.children[0].children[2].children[0].children[0]
       end
@@ -397,14 +413,38 @@ module FilesRebuilder
       #
       # Parameters::
       # * *widget* (<em>Gtk::Widget</em>): The CompareGroup widget
+      # Result::
+      # * (<em>Gtk::Widget</em>): The wanted widget
       def get_details_tree_view(widget)
         return widget.children[0].children[2].children[1].children[0].children[0].children[0]
+      end
+
+      # Get the open button
+      #
+      # Parameters::
+      # * *widget* (<em>Gtk::Widget</em>): The CompareGroup widget
+      # Result::
+      # * (<em>Gtk::Widget</em>): The wanted widget
+      def get_open_button(widget)
+        return widget.children[0].children[2].children[1].label_widget.children[1]
+      end
+
+      # Get the compare button
+      #
+      # Parameters::
+      # * *widget* (<em>Gtk::Widget</em>): The CompareGroup widget
+      # Result::
+      # * (<em>Gtk::Widget</em>): The wanted widget
+      def get_compare_button(widget)
+        return widget.children[0].children[2].children[1].label_widget.children[2]
       end
 
       # Get the score min spin
       #
       # Parameters::
       # * *widget* (<em>Gtk::Widget</em>): The CompareGroup widget
+      # Result::
+      # * (<em>Gtk::Widget</em>): The wanted widget
       def get_score_min_spin(widget)
         return widget.children[0].children[1].children[0].children[1].children[0]
       end
@@ -452,6 +492,22 @@ module FilesRebuilder
         # Create a fake child just for being able to expand it
         treestore.append(new_elem)[0] = false if has_children
       end
+
+        # Compare the currently selected item
+        #
+        # Parameters::
+        # * *widget* (<em>Gtk::Widget</em>): The CompareGroup widget
+        def compare_currently_selected_item(widget)
+          tree_widget = get_tree_view(widget)
+          selected_item = tree_widget.selection.selected
+          if (selected_item != nil)
+            line_obj_info = selected_item[0]
+            case line_obj_info[0]
+            when NODE_TYPE_FILE, NODE_TYPE_SEGMENT
+              @gui_controller.display_pointer_comparator(line_obj_info[1], line_obj_info[2], widget.user_data[:matching_selection])
+            end
+          end
+        end
 
     end
 

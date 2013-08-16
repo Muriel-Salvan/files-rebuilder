@@ -14,6 +14,12 @@ module FilesRebuilder
         end
       end
 
+      def on_open_button_clicked(button_widget)
+        widget = button_widget.parent.parent.parent
+        pointer = widget.user_data
+        @gui_controller.open_external(pointer)
+      end
+
       # Set the pointer widget
       #
       # Parameters::

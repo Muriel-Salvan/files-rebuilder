@@ -44,6 +44,8 @@ module FilesRebuilder
         require 'filesrebuilder/GUIFactory'
         require 'filesrebuilder/GUIcontroller'
         require 'filesrebuilder/_Gtk/_object'
+        require 'rUtilAnts/Platform'
+        RUtilAnts::Platform::install_platform_on_object
         gui_factory = GUIFactory.new
         gui_controller = GUIController.new(gui_factory)
         gui_factory.gui_controller = gui_controller

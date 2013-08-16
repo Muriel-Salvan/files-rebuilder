@@ -75,12 +75,12 @@ module FilesRebuilder
           end
         end
         # Find matching blocks' CRC sequences
-        lst_crc = (pointer.is_a?(FileInfo) ? pointer.crc_list : pointer.file_info.segments[pointer.idx_segment].crc_list)
+        lst_crc = (pointer.is_a?(FileInfo) ? pointer.crc_list : pointer.segment.crc_list)
         @matching_files.each do |matching_pointer, matching_info|
           if (matching_info.indexes.has_key?(:block_crc))
             lst_common_crc = matching_info.indexes[:block_crc]
             # Get the list of blocks' CRC from the file
-            lst_matching_crc = (matching_pointer.is_a?(FileInfo) ? matching_pointer.crc_list : matching_pointer.file_info.segments[matching_pointer.idx_segment].crc_list)
+            lst_matching_crc = (matching_pointer.is_a?(FileInfo) ? matching_pointer.crc_list : matching_pointer.segment.crc_list)
             # Parse the original file and get to a matching CRC
             idx_crc = 0
             while (idx_crc < lst_crc.size)
@@ -137,10 +137,10 @@ module FilesRebuilder
         lst_index_names.each do |index_name|
           score_max += COEFFS[index_name]
         end
-        lst_crc = (pointer.is_a?(FileInfo) ? pointer.crc_list : pointer.file_info.segments[pointer.idx_segment].crc_list)
+        lst_crc = (pointer.is_a?(FileInfo) ? pointer.crc_list : pointer.segment.crc_list)
         score_max += (COEFF_BLOCK_CRC_SEQUENCE + COEFFS[:block_crc]) * lst_crc.size
         score_max += COEFFS[:segment_ext] * (pointer.is_a?(FileInfo) ? pointer.segments.size : 1)
-        (pointer.is_a?(FileInfo) ? pointer.segments : [ pointer.file_info.segments[pointer.idx_segment] ]).each do |segment|
+        (pointer.is_a?(FileInfo) ? pointer.segments : [ pointer.segment ]).each do |segment|
           score_max += COEFF_SEGMENT_METADATA * segment.metadata.size
         end
 

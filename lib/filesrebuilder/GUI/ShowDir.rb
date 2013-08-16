@@ -194,7 +194,7 @@ module FilesRebuilder
                  (line_obj_info.filled))
             renderer.text = line_obj_info.size.to_s
           elsif (line_obj_info.is_a?(Model::SegmentPointer))
-            segment = line_obj_info.file_info.segments[line_obj_info.idx_segment]
+            segment = line_obj_info.segment
             renderer.text = (segment.end_offset - segment.begin_offset).to_s
           else
             renderer.text = ''

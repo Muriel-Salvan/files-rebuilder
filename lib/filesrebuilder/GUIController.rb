@@ -1,5 +1,7 @@
 require 'filesrebuilder/Model/MatchingInfo'
 require 'zlib'
+require 'tmpdir'
+require 'fileutils'
 
 module FilesRebuilder
 
@@ -223,6 +225,7 @@ module FilesRebuilder
       @dir_scanner.exit
       @exiting = true
       Gtk.main_quit
+      clean_tmp_dir
     end
 
     # Cancel scan of a given directory
@@ -416,7 +419,7 @@ module FilesRebuilder
           extension = pointer.segments[0].extensions[0]
         end
       else
-        extension = pointer.file_info.segments[pointer.idx_segment].extensions[0]
+        extension = pointer.segment.extensions[0]
       end
       # Check that this GUI component exists, otherwise switch back to :unknown
       str_extension = extension.to_s
@@ -436,7 +439,7 @@ module FilesRebuilder
         end
       else
         file_name = pointer.file_info.get_absolute_name
-        segment = pointer.file_info.segments[pointer.idx_segment]
+        segment = pointer.segment
         File.open(file_name, 'rb') do |file|
           widget_handler.init_with_data(new_widget, pointer, IOBlockReader::init(file, :block_size => Model::FileInfo::CRC_BLOCK_SIZE), segment.begin_offset, segment.end_offset)
         end
@@ -461,7 +464,7 @@ module FilesRebuilder
       end
       new_widget = @gui_factory.new_widget('DisplayMatchingPointer')
       widget_handler = @gui_factory.get_gui_handler('DisplayMatchingPointer')
-      pointer_name = (pointer.is_a?(Model::FileInfo) ? pointer.get_absolute_name : "#{pointer.file_info.get_absolute_name} ##{pointer.idx_segment} (#{pointer.file_info.segments[pointer.idx_segment].extensions.join(', ')})")
+      pointer_name = (pointer.is_a?(Model::FileInfo) ? pointer.get_absolute_name : "#{pointer.file_info.get_absolute_name} ##{pointer.idx_segment} (#{pointer.segment.extensions.join(', ')})")
       if (error == nil)
         widget_handler.set_pointer_widget(new_widget, pointer_widget)
         widget_handler.set_name(new_widget, pointer_name)
@@ -475,7 +478,50 @@ module FilesRebuilder
       return new_widget
     end
 
+    # Open a pointer's content in the OS
+    #
+    # Parameters:
+    # * *pointer* (_FileInfo_ or _SegmentPointer_): The pointer to open
+    def open_external(pointer)
+      if pointer.is_a?(Model::FileInfo)
+        # Open the file directly
+        os_open_file(pointer.get_absolute_name)
+      else
+        # Extract the segment in a temporary file before opening it
+        tmp_file_name = "#{get_tmp_dir}/#{pointer.file_info.get_absolute_name.hash.to_s}/Seg#{pointer.idx_segment}-#{pointer.file_info.base_name}"
+        segment = pointer.segment
+        begin
+          FileUtils::mkdir_p(File.dirname(tmp_file_name))
+          File.open(tmp_file_name, 'wb') do |tmp_file|
+            File.open(pointer.file_info.get_absolute_name, 'rb') do |file|
+              IOBlockReader::init(file, :block_size => Model::FileInfo::CRC_BLOCK_SIZE).each_block(segment.begin_offset..segment.end_offset-1) do |data_block|
+                tmp_file.write(data_block)
+              end
+            end
+          end
+          os_open_file(tmp_file_name)
+        rescue
+          log_err "Unable to create temporary file \"#{tmp_file_name}\" from \"#{pointer.file_info.get_absolutename}\" and open it: #{$!}."
+        end
+      end
+    end
+
     private
+
+    # Get the temporary directory name
+    #
+    # Result::
+    # * _String_: Temporary directory name
+    def get_tmp_dir
+      return "#{Dir.tmpdir}/FilesRebuilder"
+    end
+
+    # Remove temporary directory
+    def clean_tmp_dir
+      tmp_dir_name = get_tmp_dir
+      log_debug "Cleaning temporary directory #{tmp_dir_name}"
+      FileUtils::rm_rf(tmp_dir_name)
+    end
 
     # Print a number of seconds in a human-friendly way
     #

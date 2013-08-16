@@ -35,6 +35,14 @@ module FilesRebuilder
         )
       end
 
+      # Get the segment pointed
+      #
+      # Result::
+      # * _Segment_: The segment
+      def segment
+        return @file_info.segments[@idx_segment]
+      end
+
     end
 
   end
