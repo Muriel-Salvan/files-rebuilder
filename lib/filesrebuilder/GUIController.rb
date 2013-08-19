@@ -37,15 +37,13 @@ module FilesRebuilder
     # Run the Gtk callback that updates DirLine progress bars.
     # Call this when the main window has been created.
     def run_callback_dirline_progress_bars
-      main_handler = @gui_factory.get_gui_handler('Main')
-      dirline_handler = @gui_factory.get_gui_handler('DirLine')
       Gtk.timeout_add(100) do
-        (main_handler.get_dest_dirlines(@main_widget) + main_handler.get_src_dirlines(@main_widget)).each do |dirline_widget|
+        (@main_widget.get_dest_dirlines + @main_widget.get_src_dirlines).each do |dirline_widget|
           # Only consider visible progress bars
-          progress_bar_widget = dirline_handler.get_progress_bar(dirline_widget)
+          progress_bar_widget = dirline_widget.get_progress_bar
           if (progress_bar_widget.visible?)
             # Get corresponding DirScanJob
-            scan_job = @dir_scanner.find_scan_job(dirline_handler.get_dir_name(dirline_widget))
+            scan_job = @dir_scanner.find_scan_job(dirline_widget.get_dir_name)
             if (scan_job != nil)
               progression_end, progression_current, total_time, elapsed_time = scan_job.get_progress
               if (progression_end == 0)
@@ -73,8 +71,8 @@ module FilesRebuilder
     # * *dir_name* (_String_): Directory
     def add_new_dest_dirline(dir_name)
       new_widget = @gui_factory.new_widget('DirLine')
-      @gui_factory.get_gui_handler('DirLine').set_dir_name(new_widget, dir_name)
-      @gui_factory.get_gui_handler('Main').add_dest_dirline(@main_widget, new_widget)
+      new_widget.set_dir_name(dir_name)
+      @main_widget.add_dest_dirline(new_widget)
       # Update the dirline based on our data
       update_dirline(new_widget)
     end
@@ -86,8 +84,8 @@ module FilesRebuilder
     # * *dir_name* (_String_): Directory
     def add_new_src_dirline(dir_name)
       new_widget = @gui_factory.new_widget('DirLine')
-      @gui_factory.get_gui_handler('DirLine').set_dir_name(new_widget, dir_name)
-      @gui_factory.get_gui_handler('Main').add_src_dirline(@main_widget, new_widget)
+      new_widget.set_dir_name(dir_name)
+      @main_widget.add_src_dirline(new_widget)
       # Update the dirline based on our data
       update_dirline(new_widget)
     end
@@ -97,23 +95,21 @@ module FilesRebuilder
     # Parameters::
     # * *dir_name* (_String_): Directory
     def delete_dirline(dir_name)
-      main_handler = @gui_factory.get_gui_handler('Main')
-      dirline_handler = @gui_factory.get_gui_handler('DirLine')
       found = false
-      main_handler.get_dest_dirlines(@main_widget).each do |dest_dirline|
-        if (dirline_handler.get_dir_name(dest_dirline) == dir_name)
+      @main_widget.get_dest_dirlines.each do |dest_dirline|
+        if (dest_dirline.get_dir_name == dir_name)
           # Remove all previously indexed fileinfo
           @data.dst_indexes.remove(@data.get_file_info_from_dir(dir_name)) if (!found)
-          main_handler.remove_dest_dirline(@main_widget, dest_dirline)
+          @main_widget.remove_dest_dirline(dest_dirline)
           found = true
         end
       end
       found = false
-      main_handler.get_src_dirlines(@main_widget).each do |src_dirline|
-        if (dirline_handler.get_dir_name(src_dirline) == dir_name)
+      @main_widget.get_src_dirlines.each do |src_dirline|
+        if (src_dirline.get_dir_name == dir_name)
           # Remove all previously indexed fileinfo
           @data.src_indexes.remove(@data.get_file_info_from_dir(dir_name)) if (!found)
-          main_handler.remove_src_dirline(@main_widget, src_dirline)
+          @main_widget.remove_src_dirline(src_dirline)
           found = true
         end
       end
@@ -133,21 +129,18 @@ module FilesRebuilder
     # * *dirline_widget* (<em>Gtk::Widget</em>): The dirline widget to be updated
     def update_dirline(dirline_widget)
       # Get the directory name
-      dirline_handler = @gui_factory.get_gui_handler('DirLine')
-      dir_name = dirline_handler.get_dir_name(dirline_widget)
+      dir_name = dirline_widget.get_dir_name
       # Check if a scan job is associated to it
       scan_job = @dir_scanner.find_scan_job(dir_name)
       # Get the associated dir_info
       dir_info = @data.dir_info(dir_name)
-
-      dirline_handler.update_dirline_appearance(dirline_widget, dir_info, scan_job)
+      dirline_widget.update_dirline_appearance(dir_info, scan_job)
     end
 
     # Update all dirlines
     def update_dirlines
       # Loop on all dirline widgets
-      main_handler = @gui_factory.get_gui_handler('Main')
-      (main_handler.get_dest_dirlines(@main_widget) + main_handler.get_src_dirlines(@main_widget)).each do |dirline_widget|
+      (@main_widget.get_dest_dirlines + @main_widget.get_src_dirlines).each do |dirline_widget|
         update_dirline(dirline_widget)
       end
     end
@@ -159,10 +152,8 @@ module FilesRebuilder
     # * *dir_name* (_String_): Directory to update DirLine for
     def thread_invalidate_dirline_for(dir_name)
       # Find the DirLine
-      main_handler = @gui_factory.get_gui_handler('Main')
-      dirline_handler = @gui_factory.get_gui_handler('DirLine')
-      (main_handler.get_dest_dirlines(@main_widget) + main_handler.get_src_dirlines(@main_widget)).each do |dirline_widget|
-        if (dirline_handler.get_dir_name(dirline_widget) == dir_name)
+      (@main_widget.get_dest_dirlines + @main_widget.get_src_dirlines).each do |dirline_widget|
+        if (dirline_widget.get_dir_name == dir_name)
           Gtk::idle_add do
             update_dirline(dirline_widget)
             next false
@@ -175,8 +166,7 @@ module FilesRebuilder
     # This method should be called from secondary threads (not the main Gtk one).
     def thread_invalidate_all_dirlines
       # Find the DirLine
-      main_handler = @gui_factory.get_gui_handler('Main')
-      (main_handler.get_dest_dirlines(@main_widget) + main_handler.get_src_dirlines(@main_widget)).each do |dirline_widget|
+      (@main_widget.get_dest_dirlines + @main_widget.get_src_dirlines).each do |dirline_widget|
         Gtk::idle_add do
           update_dirline(dirline_widget)
           next false
@@ -192,10 +182,8 @@ module FilesRebuilder
     def scan_dir(dir_name, force_scan = false)
       # Check whether this directory is source or destination
       src_dir = false
-      main_handler = @gui_factory.get_gui_handler('Main')
-      dirline_handler = @gui_factory.get_gui_handler('DirLine')
-      main_handler.get_src_dirlines(@main_widget).each do |dirline_widget|
-        if (dirline_handler.get_dir_name(dirline_widget) == dir_name)
+      @main_widget.get_src_dirlines.each do |dirline_widget|
+        if (dirline_widget.get_dir_name == dir_name)
           src_dir = true
           break
         end
@@ -214,8 +202,7 @@ module FilesRebuilder
     # * *dir_name* (_String_): The directory to display
     def display_dir_content(dir_name)
       new_widget = @gui_factory.new_widget('ShowDir')
-      show_dir_handler = @gui_factory.get_gui_handler('ShowDir')
-      show_dir_handler.set_dir_name(new_widget, dir_name, @data.dir_info(dir_name))
+      new_widget.set_dir_name(dir_name, @data.dir_info(dir_name))
       new_widget.show
     end
 
@@ -241,7 +228,7 @@ module FilesRebuilder
       # Cancels all scans if any
       @dir_scanner.cancel_all_scans
       # Delete all dirlines
-      @gui_factory.get_gui_handler('Main').remove_all_dirlines(@main_widget)
+      @main_widget.remove_all_dirlines
     end
 
     FILE_HEADER = 'Files_Rebuilder_Save_File'.force_encoding(Encoding::ASCII_8BIT)
@@ -252,13 +239,11 @@ module FilesRebuilder
     # * *file_name* (_String_): File name to save data to [default = @current_file_name]
     def save_to_file(file_name = @current_file_name)
       # Loop on all dirline widgets
-      main_handler = @gui_factory.get_gui_handler('Main')
-      dirline_handler = @gui_factory.get_gui_handler('DirLine')
       File.open(file_name, 'wb') do |file|
         file.write(FILE_HEADER)
         file.write(Zlib::Deflate.deflate(RubySerial::dump({
-          :dest_dir_names => main_handler.get_dest_dirlines(@main_widget).map { |dirline_widget| dirline_handler.get_dir_name(dirline_widget) },
-          :src_dir_names => main_handler.get_src_dirlines(@main_widget).map { |dirline_widget| dirline_handler.get_dir_name(dirline_widget) },
+          :dest_dir_names => @main_widget.get_dest_dirlines.map { |dirline_widget| dirline_widget.get_dir_name },
+          :src_dir_names => @main_widget.get_src_dirlines.map { |dirline_widget| dirline_widget.get_dir_name },
           :data => @data
         })))
       end
@@ -305,8 +290,7 @@ module FilesRebuilder
     # * *message* (_String_): Message to notify
     def notify(message)
       Gtk::idle_add do
-        main_handler = @gui_factory.get_gui_handler('Main')
-        main_handler.notify_status(@main_widget, message)
+        @main_widget.notify_status(message)
       end
     end
 
@@ -315,13 +299,12 @@ module FilesRebuilder
     # * The window's title
     # * The Save menu sensitivity
     def invalidate_current_loaded_file
-      main_handler = @gui_factory.get_gui_handler('Main')
       if (@current_file_name == nil)
-        main_handler.set_title(@main_widget, 'Files Rebuilder')
-        main_handler.enable_save(@main_widget, false)
+        @main_widget.title = 'Files Rebuilder'
+        @main_widget.enable_save(false)
       else
-        main_handler.set_title(@main_widget, "Files Rebuilder - #{@current_file_name}")
-        main_handler.enable_save(@main_widget, true)
+        @main_widget.title = "Files Rebuilder - #{@current_file_name}"
+        @main_widget.enable_save(true)
       end
     end
 
@@ -348,18 +331,16 @@ module FilesRebuilder
       lst_dirs = []
       index = nil
       matching_selection = nil
-      main_handler = @gui_factory.get_gui_handler('Main')
-      dirline_handler = @gui_factory.get_gui_handler('DirLine')
       if src_reference
-        main_handler.get_src_dirlines(@main_widget).each do |dirline|
-          dir_name = dirline_handler.get_dir_name(dirline)
+        @main_widget.get_src_dirlines.each do |dirline|
+          dir_name = dirline.get_dir_name
           lst_dirs << [ dir_name, @data.dir_info(dir_name) ]
         end
         index = @data.dst_indexes
         matching_selection = @data.src_selection
       else
-        main_handler.get_dest_dirlines(@main_widget).each do |dirline|
-          dir_name = dirline_handler.get_dir_name(dirline)
+        @main_widget.get_dest_dirlines.each do |dirline|
+          dir_name = dirline.get_dir_name
           lst_dirs << [ dir_name, @data.dir_info(dir_name) ]
         end
         index = @data.src_indexes
@@ -367,8 +348,7 @@ module FilesRebuilder
       end
       # Display CompareGroup window
       new_widget = @gui_factory.new_widget('CompareGroup')
-      compare_group_handler = @gui_factory.get_gui_handler('CompareGroup')
-      compare_group_handler.set_dirs_to_compare(new_widget, lst_dirs, index, matching_selection)
+      new_widget.set_dirs_to_compare(lst_dirs, index, matching_selection)
       new_widget.show
     end
 
@@ -399,8 +379,7 @@ module FilesRebuilder
     def display_pointer_comparator(pointer, matching_info, matching_selection)
       # Display ComparePointer window
       new_widget = @gui_factory.new_widget('ComparePointer')
-      compare_pointer_handler = @gui_factory.get_gui_handler('ComparePointer')
-      compare_pointer_handler.set_pointer_to_compare(new_widget, pointer, matching_info, matching_selection)
+      new_widget.set_pointer_to_compare(pointer, matching_info, matching_selection)
       new_widget.show
     end
 
@@ -431,17 +410,16 @@ module FilesRebuilder
       gui_id = "DisplayFile/#{gui_name}"
       new_widget = @gui_factory.new_widget(gui_id)
       # Initialize the widget with the pointer's content
-      widget_handler = @gui_factory.get_gui_handler(gui_id)
       if pointer.is_a?(Model::FileInfo)
         file_name = pointer.get_absolute_name
         File.open(file_name, 'rb') do |file|
-          widget_handler.init_with_data(new_widget, pointer, IOBlockReader::init(file, :block_size => Model::FileInfo::CRC_BLOCK_SIZE), 0, File.size(file_name))
+          new_widget.init_with_data(pointer, IOBlockReader::init(file, :block_size => Model::FileInfo::CRC_BLOCK_SIZE), 0, File.size(file_name))
         end
       else
         file_name = pointer.file_info.get_absolute_name
         segment = pointer.segment
         File.open(file_name, 'rb') do |file|
-          widget_handler.init_with_data(new_widget, pointer, IOBlockReader::init(file, :block_size => Model::FileInfo::CRC_BLOCK_SIZE), segment.begin_offset, segment.end_offset)
+          new_widget.init_with_data(pointer, IOBlockReader::init(file, :block_size => Model::FileInfo::CRC_BLOCK_SIZE), segment.begin_offset, segment.end_offset)
         end
       end
 
@@ -463,16 +441,15 @@ module FilesRebuilder
         error = $!.to_s
       end
       new_widget = @gui_factory.new_widget('DisplayMatchingPointer')
-      widget_handler = @gui_factory.get_gui_handler('DisplayMatchingPointer')
       pointer_name = (pointer.is_a?(Model::FileInfo) ? pointer.get_absolute_name : "#{pointer.file_info.get_absolute_name} ##{pointer.idx_segment} (#{pointer.segment.extensions.join(', ')})")
       if (error == nil)
-        widget_handler.set_pointer_widget(new_widget, pointer_widget)
-        widget_handler.set_name(new_widget, pointer_name)
+        new_widget.set_pointer_widget(pointer_widget)
+        new_widget.set_name(pointer_name)
       else
-        widget_handler.set_name(new_widget, "!!! ERROR: #{error}. #{pointer_name}")
+        new_widget.set_name("!!! ERROR: #{error}. #{pointer_name}")
       end
       # Add indication in the case this matching pointer is selected
-      widget_handler.set_selected(new_widget, selected)
+      new_widget.set_selected(selected)
       new_widget.user_data = pointer
 
       return new_widget
@@ -504,6 +481,21 @@ module FilesRebuilder
           log_err "Unable to create temporary file \"#{tmp_file_name}\" from \"#{pointer.file_info.get_absolutename}\" and open it: #{$!}."
         end
       end
+    end
+
+    # Display preferences dialog
+    def display_preferences
+      pref_widget = @gui_factory.new_widget('Preferences')
+      pref_widget.set_options(@data.options)
+      pref_widget.show
+    end
+
+    # Return global options
+    #
+    # Result::
+    # * <em>map<Symbol,Object></em>: The options
+    def options
+      return @data.options
     end
 
     private

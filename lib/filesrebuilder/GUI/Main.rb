@@ -2,14 +2,17 @@ module FilesRebuilder
 
   module GUI
 
-    class Main < GUIHandler
+    module Main
 
-      # Constructor
-      def initialize(gui_factory, gui_controller)
-        super
+      # Initializer called for each new widget built
+      def self.extended(mod)
         @filter = Gtk::FileFilter.new
         @filter.name = 'FilesRebuilder saved files (*.rfr)'
         @filter.add_pattern('*.rfr')
+      end
+
+      def on_preferences_menuitem_activate
+        @gui_controller.display_preferences
       end
 
       def on_main_window_destroy
@@ -109,138 +112,78 @@ module FilesRebuilder
         @gui_controller.compare_groups(true)
       end
 
-      # Set the title of the main window
-      #
-      # Parameters::
-      # * *widget* (<em>Gtk::Widget</em>): The widget
-      # * *title* (_String_): Title
-      def set_title(widget, title)
-        widget.title = title
-      end
-
       # Enable save functionnality
       #
       # Parameters::
-      # * *widget* (<em>Gtk::Widget</em>): The widget
       # * *enable* (_Boolean_): Is the Save functionality enabled?
-      def enable_save(widget, enable)
-        get_save_menuitem(widget).sensitive = enable
+      def enable_save(enable)
+        @builder['save_menuitem'].sensitive = enable
       end
 
       # Notify a message to the user, using the statusbar
       #
       # Parameters::
-      # * *widget* (<em>Gtk::Widget</em>): The widget
       # * *message* (_String_): Message to notify
-      def notify_status(widget, message)
-        status_bar = get_status_bar(widget)
+      def notify_status(message)
+        status_bar = @builder['statusbar']
         status_bar.push(status_bar.get_context_id(''), message)
       end
 
       # Get the list of destination DirLines
       #
-      # Parameters::
-      # * *widget* (<em>Gtk::Widget</em>): The widget
       # Result::
       # <em>list<Gtk::Widget></em>: The list of DirLines
-      def get_dest_dirlines(widget)
-        return get_dest_dirlines_vbox(widget).children
+      def get_dest_dirlines
+        return @builder['dest_dirlines_vbox'].children
       end
 
       # Add a new DirLine for destination
       #
       # Parameters::
-      # * *widget* (<em>Gtk::Widget</em>): The widget
       # * *dirline_widget* (<em>Gtk::Widget</em>): The DirLine widget to add
-      def add_dest_dirline(widget, dirline_widget)
-        get_dest_dirlines_vbox(widget).child = dirline_widget
+      def add_dest_dirline(dirline_widget)
+        @builder['dest_dirlines_vbox'] << dirline_widget
       end
 
       # Remove a destination DirLine
       #
       # Parameters::
-      # * *widget* (<em>Gtk::Widget</em>): The widget
       # * *dirline_widget* (<em>Gtk::Widget</em>): The DirLine widget to remove
-      def remove_dest_dirline(widget, dirline_widget)
-        get_dest_dirlines_vbox(widget).remove(dirline_widget)
+      def remove_dest_dirline(dirline_widget)
+        @builder['dest_dirlines_vbox'].remove(dirline_widget)
       end
 
       # Remove all DirLines
-      def remove_all_dirlines(widget)
-        dirlines_container = get_dest_dirlines_vbox(widget)
-        dirlines_container.children.each do |dirline_widget|
-          dirlines_container.remove(dirline_widget)
+      def remove_all_dirlines
+        [ @builder['dest_dirlines_vbox'], @builder['src_dirlines_vbox'] ].each do |dirlines_container|
+          dirlines_container.children.each do |dirline_widget|
+            dirlines_container.remove(dirline_widget)
+          end
         end
       end
 
       # Get the list of source DirLines
       #
-      # Parameters::
-      # * *widget* (<em>Gtk::Widget</em>): The widget
       # Result::
       # <em>list<Gtk::Widget></em>: The list of DirLines
-      def get_src_dirlines(widget)
-        return get_src_dirlines_vbox(widget).children
+      def get_src_dirlines
+        return @builder['src_dirlines_vbox'].children
       end
 
       # Add a new DirLine for source
       #
       # Parameters::
-      # * *widget* (<em>Gtk::Widget</em>): The widget
       # * *dirline_widget* (<em>Gtk::Widget</em>): The DirLine widget to add
-      def add_src_dirline(widget, dirline_widget)
-        get_src_dirlines_vbox(widget).child = dirline_widget
+      def add_src_dirline(dirline_widget)
+        @builder['src_dirlines_vbox'] << dirline_widget
       end
 
       # Remove a source DirLine
       #
       # Parameters::
-      # * *widget* (<em>Gtk::Widget</em>): The widget
       # * *dirline_widget* (<em>Gtk::Widget</em>): The DirLine widget to remove
-      def remove_src_dirline(widget, dirline_widget)
-        get_src_dirlines_vbox(widget).remove(dirline_widget)
-      end
-
-      private
-
-      # Get the destination DirLines VBox
-      #
-      # Parameters::
-      # * *widget* (<em>Gtk::Widget</em>): The widget
-      # Result::
-      # <em>Gtk::Widget</em>: The VBox
-      def get_dest_dirlines_vbox(widget)
-        return widget.children[0].children[2].children[0].children[0].children[0].children[0]
-      end
-
-      # Get the source DirLines VBox
-      #
-      # Parameters::
-      # * *widget* (<em>Gtk::Widget</em>): The widget
-      # Result::
-      # <em>Gtk::Widget</em>: The VBox
-      def get_src_dirlines_vbox(widget)
-        return widget.children[0].children[2].children[1].children[0].children[0].children[0]
-      end
-
-      # Get the statusbar
-      #
-      # Parameters::
-      # * *widget* (<em>Gtk::Widget</em>): The widget
-      # Result::
-      # <em>Gtk::Widget</em>: The status bar
-      def get_status_bar(widget)
-        return widget.children[0].children[3]
-      end
-
-      # Get the Save menu item
-      #
-      # Parameters::
-      # * *widget* (<em>Gtk::Widget</em>): The widget
-      # Result::
-      # <em>Gtk::Widget</em>: The Save menu item
-      def get_save_menuitem(widget)
-        return widget.children[0].children[0].children[0].submenu.children[2]
+      def remove_src_dirline(dirline_widget)
+        @builder['src_dirlines_vbox'].remove(dirline_widget)
       end
 
     end

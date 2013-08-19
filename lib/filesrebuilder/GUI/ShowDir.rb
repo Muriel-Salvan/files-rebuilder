@@ -2,7 +2,7 @@ module FilesRebuilder
 
   module GUI
 
-    class ShowDir < GUIHandler
+    module ShowDir
 
       def on_treeview_row_expanded(widget, tree_iter, tree_path)
         # If the only child has no data, it means it is a fake child, and we have to create real children
@@ -46,7 +46,7 @@ module FilesRebuilder
       def on_treeview_cursor_changed(widget)
         # Get the selected TreeIter
         selected_item = widget.selection.selected
-        treestore = get_details_tree_view(widget.parent.parent.parent.parent).model
+        treestore = @builder['details_treeview'].model
         treestore.clear
         if (selected_item != nil)
           line_obj_info = selected_item[0]
@@ -101,16 +101,15 @@ module FilesRebuilder
       # Set the directory to be displayed
       #
       # Parameters::
-      # * *widget* (<em>Gtk::Widget</em>): The ShowDir widget
       # * *dir_name* (_String_): Directory to display
       # * *dir_info* (<em>Model::DirInfo</em>): Corresponding DirInfo
-      def set_dir_name(widget, dir_name, dir_info)
+      def set_dir_name(dir_name, dir_info)
 
         # Create the main TreeStore
         treestore = Gtk::TreeStore.new(Model::DirInfo)
         add_obj_info(treestore, nil, dir_info)
         # Assign TreeStore to the view
-        view = get_tree_view(widget)
+        view = @builder['treeview']
         view.model = treestore
         # Set renderers
         # == Icon ==
@@ -215,7 +214,7 @@ module FilesRebuilder
         end
 
         # Create a TreeStore for the details pane
-        details_tree_view = get_details_tree_view(widget)
+        details_tree_view = @builder['details_treeview']
         details_treestore = Gtk::TreeStore.new(String, String)
         details_tree_view.model = details_treestore
         # == Property ==
@@ -236,22 +235,6 @@ module FilesRebuilder
       end
 
       private
-
-      # Get the tree view
-      #
-      # Parameters::
-      # * *widget* (<em>Gtk::Widget</em>): The ShowDir widget
-      def get_tree_view(widget)
-        return widget.children[0].children[2].children[0].children[0]
-      end
-
-      # Get the details tree view
-      #
-      # Parameters::
-      # * *widget* (<em>Gtk::Widget</em>): The ShowDir widget
-      def get_details_tree_view(widget)
-        return widget.children[0].children[2].children[1].children[0].children[0].children[0]
-      end
 
       # Create items for a given object model in a treestore
       #

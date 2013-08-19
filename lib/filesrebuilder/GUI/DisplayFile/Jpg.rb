@@ -4,23 +4,22 @@ module FilesRebuilder
 
     module DisplayFile
 
-      class Jpg < GUIHandler
+      module Jpg
 
         # Initialize the widget based on a pointer content
         #
         # Parameters::
-        # * *widget* (<em>Gtk::Widget</em>): The widget to initialize
         # * *pointer* (_FileInfo_ or _SegmentPointer_): The pointer
         # * *data* (_IOBlockReader_): The data to read content from
         # * *begin_offset* (_Fixnum_): Beginning of the content in the data
         # * *end_offset* (_Fixnum_): Ending of the content in the data
-        def init_with_data(widget, pointer, data, begin_offset, end_offset)
+        def init_with_data(pointer, data, begin_offset, end_offset)
           pixbuf_loader = Gdk::PixbufLoader.open('image/jpeg', true) do |loader|
             data.each_block(begin_offset..end_offset-1) do |data_block|
               loader.write(data_block)
             end
           end
-          set_image(widget, pixbuf_loader.pixbuf)
+          set_image(self, pixbuf_loader.pixbuf)
         end
 
         # Set the image

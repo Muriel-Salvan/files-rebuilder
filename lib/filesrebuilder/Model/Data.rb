@@ -16,6 +16,7 @@ module FilesRebuilder
       attr_reader :dst_indexes
       attr_reader :src_selection
       attr_reader :dst_selection
+      attr_reader :options
 
       # Constructor
       def initialize
@@ -27,6 +28,11 @@ module FilesRebuilder
         # Selection
         @src_selection = MatchingSelection.new
         @dst_selection = MatchingSelection.new
+        # Options
+        # Set defaults here
+        @options = {
+          :score_min => 0
+        }
         # Mutex protecting any access to the data (@dirs_info)
         @global_mutex = Mutex.new
       end
