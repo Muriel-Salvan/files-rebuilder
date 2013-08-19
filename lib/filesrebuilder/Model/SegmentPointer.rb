@@ -43,6 +43,14 @@ module FilesRebuilder
         return @file_info.segments[@idx_segment]
       end
 
+      # Get the CRC of this segment
+      #
+      # Result::
+      # * _String_: The CRC
+      def get_crc
+        return self.segment.get_crc
+      end
+
     end
 
   end

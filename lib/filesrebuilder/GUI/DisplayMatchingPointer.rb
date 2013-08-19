@@ -14,7 +14,16 @@ module FilesRebuilder
       end
 
       def on_open_button_clicked(button_widget)
-        @gui_controller.open_external(self.user_data)
+        @gui_controller.open_external(@matching_pointers[0])
+      end
+
+      # List of pointers that are represented by this widget
+      # list< ( FileInfo | SegmentPointer ) >
+      attr_reader :matching_pointers
+
+      # Initialize this matching pointer
+      def init_matching_pointers
+        @matching_pointers = []
       end
 
       # Set the pointer widget
@@ -25,12 +34,15 @@ module FilesRebuilder
         @builder['container_frame'] << pointer_widget
       end
 
-      # Set the name appearing in the matching pointer widget
+      # Add a reference to a FileInfo or a SegmentPointer corresponding to the content of this widget
       #
       # Parameters::
-      # * *name* (_String_): The name to be displayed
-      def set_name(name)
-        @builder['name_label'].label = name
+      # * *pointer* (_FileInfo_ or _SegmentPointer_): The pointer referenced by this widget
+      # * *message* (_String_): Additional message. nil for none. [default = nil]
+      def add_pointer(pointer, message = nil)
+        @builder['labels_vbox'] << Gtk::Label.new((pointer.is_a?(Model::FileInfo) ? pointer.get_absolute_name : "#{pointer.file_info.get_absolute_name} ##{pointer.idx_segment} (#{pointer.segment.extensions.join(', ')})"))
+        @builder['labels_vbox'].show_all
+        @matching_pointers << pointer
       end
 
       # Set the selection

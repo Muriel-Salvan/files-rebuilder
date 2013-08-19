@@ -441,16 +441,15 @@ module FilesRebuilder
         error = $!.to_s
       end
       new_widget = @gui_factory.new_widget('DisplayMatchingPointer')
-      pointer_name = (pointer.is_a?(Model::FileInfo) ? pointer.get_absolute_name : "#{pointer.file_info.get_absolute_name} ##{pointer.idx_segment} (#{pointer.segment.extensions.join(', ')})")
+      new_widget.init_matching_pointers
       if (error == nil)
         new_widget.set_pointer_widget(pointer_widget)
-        new_widget.set_name(pointer_name)
+        new_widget.add_pointer(pointer)
       else
-        new_widget.set_name("!!! ERROR: #{error}. #{pointer_name}")
+        new_widget.add_pointer(pointer, "!!! ERROR: #{error}.")
       end
       # Add indication in the case this matching pointer is selected
       new_widget.set_selected(selected)
-      new_widget.user_data = pointer
 
       return new_widget
     end

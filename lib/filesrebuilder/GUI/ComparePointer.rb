@@ -14,9 +14,20 @@ module FilesRebuilder
         @matching_selection = matching_selection
         @idx_focused = nil
         @builder['original_container'] << @gui_controller.create_widget_for_matching_pointer(pointer, matching_selection.matching_pointers[pointer] == pointer)
+        # For each encountered CRC, keep the matching pointer widget
+        # map< String, Gtk::Widget >
+        crcs = {}
         matching_pointers_container = @builder['matching_container']
         matching_info.matching_files(@gui_controller.options[:score_min]).sort_by { |_, matching_file_info| matching_file_info.score }.reverse_each do |matching_pointer, matching_file_info|
-          matching_pointers_container << @gui_controller.create_widget_for_matching_pointer(matching_pointer, matching_selection.matching_pointers[pointer] == matching_pointer)
+          crc = matching_pointer.get_crc
+          if crcs.has_key?(crc)
+            # Add it to the existing widget
+            crcs[crc].add_pointer(matching_pointer)
+          else
+            matching_pointer_widget = @gui_controller.create_widget_for_matching_pointer(matching_pointer, matching_selection.matching_pointers[pointer] == matching_pointer)
+            matching_pointers_container << matching_pointer_widget
+            crcs[crc] = matching_pointer_widget
+          end
         end
         # First, focus the original one
         set_focused(-1)
@@ -46,10 +57,10 @@ module FilesRebuilder
       # Select a given Matching pointer widget
       #
       # Parameters::
-      # * *matching_pointer_widget* (<em>Gtk::Widget</em>): The MAtching pointer widget
+      # * *matching_pointer_widget* (<em>Gtk::Widget</em>): The Matching pointer widget
       def select_pointer_widget(matching_pointer_widget)
-        original_pointer = @builder['original_container'].children[0].user_data
-        matched_pointer = matching_pointer_widget.user_data
+        original_pointer = @builder['original_container'].children[0].matching_pointers[0]
+        matched_pointer = matching_pointer_widget.matching_pointers[0]
         @matching_selection.matching_pointers[original_pointer] = matched_pointer
         self.destroy
       end
@@ -64,16 +75,16 @@ module FilesRebuilder
         if (@idx_focused != idx_focus)
           matching_selection = @matching_selection
           original_pointer_widget = @builder['original_container'].children[0]
-          original_pointer = original_pointer_widget.user_data
+          original_pointer = original_pointer_widget.matching_pointers[0]
           matching_pointers_container = @builder['matching_container']
           # Update the previous one
           if (@idx_focused != nil)
             previous_focused_widget = ((@idx_focused == -1) ? original_pointer_widget : matching_pointers_container.children[@idx_focused])
-            previous_focused_widget.set_focus(false, matching_selection.matching_pointers[original_pointer] == previous_focused_widget.user_data)
+            previous_focused_widget.set_focus(false, matching_selection.matching_pointers[original_pointer] == previous_focused_widget.matching_pointers[0])
           end
           # Update the new one
           next_focused_widget = ((idx_focus == -1) ? original_pointer_widget : matching_pointers_container.children[idx_focus])
-          next_focused_widget.set_focus(true, matching_selection.matching_pointers[original_pointer] == next_focused_widget.user_data)
+          next_focused_widget.set_focus(true, matching_selection.matching_pointers[original_pointer] == next_focused_widget.matching_pointers[0])
           @idx_focused = idx_focus
           # Make sure it is visible
           @builder['matching_scrolledwindow'].vadjustment.value = matching_pointers_container.children[idx_focus].allocation.y if (idx_focus != -1)
