@@ -54,9 +54,10 @@ module FilesRebuilder
           line_obj_info = selected_item[0]
           case line_obj_info[0]
           when NODE_TYPE_DIR
-            open_button.sensitive = false
-            compare_button.sensitive = false
             dir_info = line_obj_info[1]
+            open_button.sensitive = true
+            open_button.user_data = dir_info
+            compare_button.sensitive = false
             line = treestore.append(nil)
             line[0] = 'Number of files'
             line[1] = dir_info.files.size.to_s
@@ -334,17 +335,8 @@ module FilesRebuilder
           case line_obj_info[0]
           when NODE_TYPE_DIR
             dir_info = line_obj_info[1]
-            nbr_unmatched_files = 0
-            nbr_segments = 0
-            nbr_unmatched_segments = 0
-            dir_info.files.each do |file_base_name, file_info|
-              nbr_unmatched_files += 1 if !@matching_selection.matching_pointers.has_key?(file_info)
-              file_info.segments.size.times do |idx_segment|
-                nbr_unmatched_segments += 1 if !@matching_selection.matching_pointers.has_key?(Model::SegmentPointer.new(file_info, idx_segment))
-                nbr_segments += 1
-              end
-            end
-            renderer.text = "#{dir_info.files.size} files (#{nbr_unmatched_files} unmatched), #{nbr_segments} segments (#{nbr_unmatched_segments} unmatched), #{dir_info.sub_dirs.size} sub directories"
+            counters = count(dir_info)
+            renderer.text = "#{counters[:nbr_files]} files (#{counters[:nbr_unmatched_files]} unmatched), #{counters[:nbr_segments]} segments (#{counters[:nbr_unmatched_segments]} unmatched), #{dir_info.sub_dirs.size} sub directories"
           when NODE_TYPE_FILE
             renderer.text = "#{line_obj_info[2].matching_files(@gui_controller.options[:score_min]).size} matching files, #{line_obj_info[2].crc_matching_files.size} exact matching files"
           when NODE_TYPE_SEGMENT
@@ -442,6 +434,36 @@ module FilesRebuilder
             @gui_controller.display_pointer_comparator(line_obj_info[1], line_obj_info[2], @matching_selection)
           end
         end
+      end
+
+      # Get various counters out of a directory entry
+      #
+      # Parameters::
+      # * *dir_info* (_DirInfo_): The dir info
+      # Result::
+      # * <em>map<Symbol,Fixnum></em>: The counters:
+      #   * *:nbr_files*: Number of files
+      #   * *:nbr_unmatched_files*: Number of unmatched files
+      #   * *:nbr_segments*: Number of segments
+      #   * *:nbr_unmatched_segments*: Number of unmatched segments
+      def count(dir_info)
+        result = {
+          :nbr_files => dir_info.files.size,
+          :nbr_unmatched_files => 0,
+          :nbr_segments => 0,
+          :nbr_unmatched_segments => 0
+        }
+        dir_info.files.each do |file_base_name, file_info|
+          result[:nbr_unmatched_files] += 1 if !@matching_selection.matching_pointers.has_key?(file_info)
+          file_info.segments.size.times do |idx_segment|
+            result[:nbr_unmatched_segments] += 1 if !@matching_selection.matching_pointers.has_key?(Model::SegmentPointer.new(file_info, idx_segment))
+            result[:nbr_segments] += 1
+          end
+        end
+        dir_info.sub_dirs.each do |dir_base_name, sub_dir_info|
+          result.merge!(count(sub_dir_info)) { |counter_name, old_counter, new_counter| old_counter + new_counter }
+        end
+        return result
       end
 
     end

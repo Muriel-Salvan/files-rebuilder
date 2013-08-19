@@ -460,7 +460,8 @@ module FilesRebuilder
     # Parameters:
     # * *pointer* (_FileInfo_ or _SegmentPointer_): The pointer to open
     def open_external(pointer)
-      if pointer.is_a?(Model::FileInfo)
+      if (pointer.is_a?(Model::FileInfo) or
+          pointer.is_a?(Model::DirInfo))
         # Open the file directly
         os_open_file(pointer.get_absolute_name)
       else
