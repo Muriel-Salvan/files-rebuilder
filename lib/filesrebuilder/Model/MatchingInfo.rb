@@ -25,10 +25,9 @@ module FilesRebuilder
       #   list< ( FileInfo  | SegmentInfo ) >
       attr_reader :crc_matching_files
 
-      # Matching files with other indexes than CRC
-      #   map< ( file_info | segment_info ), matching_info >
-      #   map< ( FileInfo  | SegmentInfo ),  MatchingIndexSinglePointer >
-      attr_reader :matching_files
+      # Maximal score
+      #   Fixnum
+      attr_reader :score_max
 
       # Constructor
       #
@@ -36,8 +35,12 @@ module FilesRebuilder
       # * *matching_index* (_MatchingIndex_): Matching index used to compute this MatchingInfo
       # * *pointer* (_FileInfo_ or _SegmentPointer_): Pointer of the file for which we have matching index
       def initialize(matching_index, pointer)
+        # Matching files with other indexes than CRC
+        #   map< ( file_info | segment_info ), matching_pointer_info >
+        #   map< ( FileInfo  | SegmentInfo ),  MatchingIndexSinglePointer >
         @matching_files = {}
         @crc_matching_files = {}
+        @score_max = compute_score_max(pointer)
         # First find CRC matching files
         if (matching_index.indexes.has_key?(:crc))
           matching_index.indexes[:crc].each do |data, lst_pointers|
@@ -123,28 +126,47 @@ module FilesRebuilder
         end
       end
 
+      # Return matching files above a given score.
+      # Ignore CRC-matching ones
+      #
+      # Parameters::
+      # * *score_min* (_Fixnum_): Minimal score [default = 0]
+      # Result::
+      # * <em>map< (FileInfo|SegmentInfo), MatchingIndexSinglePointer ></em>: The matching files
+      def matching_files(score_min = 0)
+        if (score_min == 0)
+          return @matching_files
+        else
+          return @matching_files.select do |matching_pointer, matching_pointer_info|
+            next ((matching_pointer_info.score*100)/@score_max >= score_min)
+          end
+        end
+      end
+
+      private
+
       # Compute the maximal score matching a given pointer could get
       #
       # Parameters::
       # * *pointer* (_FileInfo_ or _SegmentPointer_): The pointer to compute the maximal score for
       # Result::
       # * _Fixnum_: The maximal score
-      def self.compute_score_max(pointer)
+      def compute_score_max(pointer)
         file_info = (pointer.is_a?(FileInfo) ? pointer : pointer.file_info)
-        score_max = 0
+        result_score_max = 0
         lst_index_names = [ :base_name, :size, :date ]
         lst_index_names << :ext if (!File.extname(file_info.base_name).empty?)
         lst_index_names.each do |index_name|
-          score_max += COEFFS[index_name]
+          result_score_max += COEFFS[index_name]
         end
         lst_crc = (pointer.is_a?(FileInfo) ? pointer.crc_list : pointer.segment.crc_list)
-        score_max += (COEFF_BLOCK_CRC_SEQUENCE + COEFFS[:block_crc]) * lst_crc.size
-        score_max += COEFFS[:segment_ext] * (pointer.is_a?(FileInfo) ? pointer.segments.size : 1)
+        result_score_max += (COEFF_BLOCK_CRC_SEQUENCE + COEFFS[:block_crc]) * lst_crc.size
+        result_score_max += COEFFS[:segment_ext] * (pointer.is_a?(FileInfo) ? pointer.segments.size : 1)
         (pointer.is_a?(FileInfo) ? pointer.segments : [ pointer.segment ]).each do |segment|
-          score_max += COEFF_SEGMENT_METADATA * segment.metadata.size
+          result_score_max += COEFF_SEGMENT_METADATA * segment.metadata.size
         end
 
-        return score_max
+        return result_score_max
       end
 
     end

@@ -28,10 +28,6 @@ module FilesRebuilder
       #   Fixnum
       attr_accessor :score
 
-      # Maximal score that can be given to this match.
-      #   Fixnum
-      attr_accessor :score_max
-
       # Constructor
       def initialize
         @indexes = {}

@@ -15,7 +15,7 @@ module FilesRebuilder
         @idx_focused = nil
         @builder['original_container'] << @gui_controller.create_widget_for_matching_pointer(pointer, matching_selection.matching_pointers[pointer] == pointer)
         matching_pointers_container = @builder['matching_container']
-        matching_info.matching_files.sort_by { |_, matching_file_info| matching_file_info.score }.reverse_each do |matching_pointer, matching_file_info|
+        matching_info.matching_files(@gui_controller.options[:score_min]).sort_by { |_, matching_file_info| matching_file_info.score }.reverse_each do |matching_pointer, matching_file_info|
           matching_pointers_container << @gui_controller.create_widget_for_matching_pointer(matching_pointer, matching_selection.matching_pointers[pointer] == matching_pointer)
         end
         # First, focus the original one
