@@ -57,7 +57,7 @@ module FilesRebuilder
             dir_info = line_obj_info[1]
             open_button.sensitive = true
             open_button.user_data = dir_info
-            compare_button.sensitive = false
+            compare_button.sensitive = true
             line = treestore.append(nil)
             line[0] = 'Number of files'
             line[1] = dir_info.files.size.to_s
@@ -202,6 +202,10 @@ module FilesRebuilder
         compare_currently_selected_item
       end
 
+      def on_compare_all_toolbutton_clicked(toolbutton_widget)
+        @gui_controller.display_dirinfo_comparator(@lst_dir_infos, @index, @matching_selection)
+      end
+
       # Set the directory to be displayed
       #
       # Parameters::
@@ -211,6 +215,7 @@ module FilesRebuilder
       def set_dirs_to_compare(lst_dirs, index, matching_selection)
         @matching_selection = matching_selection
         @index = index
+        @lst_dir_infos = lst_dirs.map { |_, dir_info| dir_info }
         # Create the main TreeStore
         treestore = Gtk::TreeStore.new(Model::DirInfo)
         lst_dirs.each do |dir_name, dir_info|
@@ -407,7 +412,6 @@ module FilesRebuilder
           end
           # Create all the matching elements, sorted by decreasing score
           matching_info.matching_files(@gui_controller.options[:score_min]).sort_by { |pointer, matching_file_info| matching_file_info.score }.reverse_each do |pointer, matching_file_info|
-            #p matching_file_info.score_max
             treestore.append(new_elem)[0] = [ NODE_TYPE_MATCHING_FILE, pointer, matching_file_info ]
           end
           # Create sub-segments if need be
@@ -430,8 +434,10 @@ module FilesRebuilder
         if (selected_item != nil)
           line_obj_info = selected_item[0]
           case line_obj_info[0]
+          when NODE_TYPE_DIR
+            @gui_controller.display_dirinfo_comparator( [ line_obj_info[1] ], @index, @matching_selection)
           when NODE_TYPE_FILE, NODE_TYPE_SEGMENT
-            @gui_controller.display_pointer_comparator(line_obj_info[1], line_obj_info[2], @matching_selection)
+            @gui_controller.display_pointer_comparator(line_obj_info[1], line_obj_info[2].matching_files(@gui_controller.options[:score_min]).sort_by { |_, matching_file_info| -matching_file_info.score }, @matching_selection)
           end
         end
       end

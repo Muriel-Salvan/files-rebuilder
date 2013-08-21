@@ -1,4 +1,5 @@
 require 'filesrebuilder/Model/MatchingInfo'
+require 'filesrebuilder/PointerIterator'
 require 'zlib'
 require 'tmpdir'
 require 'fileutils'
@@ -374,12 +375,30 @@ module FilesRebuilder
     #
     # Parameters::
     # * *pointer* (_FileInfo_ or _SegmentPointer_): Pointer to be compared
-    # * *matching_info* (_MatchingInfo_): Matching information of all files matching this pointer
+    # * *matching_pointers* (<em>list< [ (_FileInfo_ | _SegmentPointer_), MatchingIndexSinglePointer ] ></em>): The sorted list of matching pointers, along with their matching index information
     # * *matching_selection* (_MatchingSelection_): Current user selection of matching files
-    def display_pointer_comparator(pointer, matching_info, matching_selection)
+    def display_pointer_comparator(pointer, matching_pointers, matching_selection)
       # Display ComparePointer window
       new_widget = @gui_factory.new_widget('ComparePointer')
-      new_widget.set_pointer_to_compare(pointer, matching_info, matching_selection)
+      itr_pointer = PointerIterator.new
+      itr_pointer.set_from_single(pointer, matching_pointers)
+      new_widget.set_pointers_to_compare(itr_pointer, matching_selection, true)
+      new_widget.show
+    end
+
+    # Display a dirinfo comparator.
+    # This displays pointer comparators for every pointer (files first then segments) in the given dirinfo that has a minimal score (set in options) and does not have a matching pointer yet.
+    #
+    # Parameters::
+    # * *lst_dirinfo* (<em>list<DirInfo></em>): List of dirinfo to consider
+    # * *index* (_MatchingIndex_): Index of the possibly matching files
+    # * *matching_selection* (_MatchingSelection_): Current user selection of matching files
+    def display_dirinfo_comparator(lst_dirinfo, index, matching_selection)
+      # Display ComparePointer window
+      new_widget = @gui_factory.new_widget('ComparePointer')
+      itr_pointer = PointerIterator.new
+      itr_pointer.set_from_dirinfos(self, lst_dirinfo, index, matching_selection)
+      new_widget.set_pointers_to_compare(itr_pointer, matching_selection, false)
       new_widget.show
     end
 
