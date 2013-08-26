@@ -397,7 +397,7 @@ module FilesRebuilder
       # Display ComparePointer window
       new_widget = @gui_factory.new_widget('ComparePointer')
       itr_pointer = PointerIterator.new
-      itr_pointer.set_from_dirinfos(self, lst_dirinfo, index, matching_selection)
+      itr_pointer.set_from_dirinfos(self, lst_dirinfo, index, matching_selection, @data.options[:gui_names_filter])
       new_widget.set_pointers_to_compare(itr_pointer, matching_selection, false)
       new_widget.show
     end
@@ -409,25 +409,7 @@ module FilesRebuilder
     # Result::
     # * <em>Gtk::Widget</em>: The corresponding widget
     def create_widget_for_pointer(pointer)
-      # Get the extensions
-      if pointer.is_a?(Model::FileInfo)
-        if (pointer.segments.size > 1)
-          extension = :unknown
-        else
-          extension = pointer.segments[0].extensions[0]
-        end
-      else
-        extension = pointer.segment.extensions[0]
-      end
-      # Check that this GUI component exists, otherwise switch back to :unknown
-      str_extension = extension.to_s
-      gui_name = "#{str_extension[0].upcase}#{str_extension[1..-1]}"
-      if (!File.exist?("#{File.dirname(__FILE__)}/GUI/DisplayFile/#{gui_name}.rb"))
-        log_info "No GUI to display files of extension #{gui_name}."
-        gui_name = 'Unknown'
-      end
-      gui_id = "DisplayFile/#{gui_name}"
-      new_widget = @gui_factory.new_widget(gui_id)
+      new_widget = @gui_factory.new_widget("DisplayFile/#{get_gui_name_for(pointer)}")
       # Initialize the widget with the pointer's content
       if pointer.is_a?(Model::FileInfo)
         file_name = pointer.get_absolute_name
@@ -515,6 +497,33 @@ module FilesRebuilder
     # * <em>map<Symbol,Object></em>: The options
     def options
       return @data.options
+    end
+
+    # Get the name of the GUI that is used to display the content of a given pointer
+    #
+    # Parameters::
+    # * *pointer* (_FileInfo_ or _SegmentPointer_): The pointer to display
+    # Result::
+    # * _String_: The corresponding GUI name
+    def get_gui_name_for(pointer)
+      # Get the extensions
+      if pointer.is_a?(Model::FileInfo)
+        if (pointer.segments.size > 1)
+          extension = :unknown
+        else
+          extension = pointer.segments[0].extensions[0]
+        end
+      else
+        extension = pointer.segment.extensions[0]
+      end
+      # Check that this GUI component exists, otherwise switch back to :unknown
+      str_extension = extension.to_s
+      gui_name = "#{str_extension[0].upcase}#{str_extension[1..-1]}"
+      if (!File.exist?("#{File.dirname(__FILE__)}/GUI/DisplayFile/#{gui_name}.rb"))
+        log_debug "No GUI to display files of extension #{gui_name}."
+        gui_name = 'Unknown'
+      end
+      return gui_name
     end
 
     private

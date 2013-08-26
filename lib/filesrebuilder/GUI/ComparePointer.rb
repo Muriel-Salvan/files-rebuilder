@@ -4,6 +4,14 @@ module FilesRebuilder
 
     module ComparePointer
 
+      # List of widget names that are enabled when a comparison is displayed
+      SENSITIVE_WIDGETS = [
+        'select_original_button',
+        'next_match_button',
+        'previous_match_button',
+        'select_matched_button'
+      ]
+
       # Set the pointer to be compared in this widget
       #
       # Parameters::
@@ -89,9 +97,7 @@ module FilesRebuilder
           @idx_comparison += 1
           notify('')
         end
-        if (pointer != nil)
-          load_comparison(pointer, matching_pointers)
-        end
+        load_comparison(pointer, matching_pointers)
       end
 
       # Display the previous comparison
@@ -109,9 +115,7 @@ module FilesRebuilder
           @idx_comparison -= 1
           notify('')
         end
-        if (pointer != nil)
-          load_comparison(pointer, matching_pointers)
-        end
+        load_comparison(pointer, matching_pointers)
       end
 
       # Load a new pointer and its matching pointers to be displayed
@@ -128,24 +132,33 @@ module FilesRebuilder
         matching_pointers_container.each do |child_widget|
           matching_pointers_container.remove(child_widget)
         end
-        # Create new containers
-        original_container << @gui_controller.create_widget_for_matching_pointer(pointer, @matching_selection.matching_pointers[pointer] == pointer)
-        # For each encountered CRC, keep the matching pointer widget
-        # map< String, Gtk::Widget >
-        crcs = {}
-        matching_pointers.each do |matching_pointer, matching_file_info|
-          crc = matching_pointer.get_crc
-          if crcs.has_key?(crc)
-            # Add it to the existing widget
-            crcs[crc].add_pointer(matching_pointer)
-          else
-            matching_pointer_widget = @gui_controller.create_widget_for_matching_pointer(matching_pointer, @matching_selection.matching_pointers[pointer] == matching_pointer)
-            matching_pointers_container << matching_pointer_widget
-            crcs[crc] = matching_pointer_widget
+        if (pointer == nil)
+          SENSITIVE_WIDGETS.each do |widget_name|
+            @builder[widget_name].sensitive = false
           end
+        else
+          SENSITIVE_WIDGETS.each do |widget_name|
+            @builder[widget_name].sensitive = true
+          end
+          # Create new containers
+          original_container << @gui_controller.create_widget_for_matching_pointer(pointer, @matching_selection.matching_pointers[pointer] == pointer)
+          # For each encountered CRC, keep the matching pointer widget
+          # map< String, Gtk::Widget >
+          crcs = {}
+          matching_pointers.each do |matching_pointer, matching_file_info|
+            crc = matching_pointer.get_crc
+            if crcs.has_key?(crc)
+              # Add it to the existing widget
+              crcs[crc].add_pointer(matching_pointer)
+            else
+              matching_pointer_widget = @gui_controller.create_widget_for_matching_pointer(matching_pointer, @matching_selection.matching_pointers[pointer] == matching_pointer)
+              matching_pointers_container << matching_pointer_widget
+              crcs[crc] = matching_pointer_widget
+            end
+          end
+          # First, focus the first matched one
+          set_focused(0)
         end
-        # First, focus the first matched one
-        set_focused(0)
         if (!@single)
           @builder['counters_label'].text = "##{@idx_comparison}/#{@nbr_comparisons-1} - #{@itr_pointer.count[:nbr_files]} files (#{@itr_pointer.count[:nbr_unmatched_files]} unmatched) / #{@itr_pointer.count[:nbr_segments]} segments (#{@itr_pointer.count[:nbr_unmatched_segments]} unmatched)"
         end

@@ -3,12 +3,21 @@ module FilesRebuilder
 	# Provide an iterator interface used for ComparePointer GUI
   class PointerIterator
 
+    SOURCE_SINGLE = 0
+    SOURCE_DIRINFOS = 1
+
+    # Constructor
+    def initialize
+      @source = nil
+    end
+
   	# Initialize the iterator with a single pointer and its list of matching pointers
   	#
   	# Parameters::
     # * *pointer* (_FileInfo_ or _SegmentPointer_): Pointer to be compared
     # * *matching_pointers* (<em>list< [ (_FileInfo_ | _SegmentPointer_), MatchingIndexSinglePointer ] ></em>): The sorted list of matching pointers, along with their matching index information
     def set_from_single(pointer, matching_pointers)
+      @source = SOURCE_SINGLE
     	@pointer = pointer
     	@matching_pointers = matching_pointers
       @last_given = nil
@@ -21,11 +30,14 @@ module FilesRebuilder
     # * *lst_dirinfo* (<em>list<DirInfo></em>): List of dirinfo to consider
     # * *index* (_MatchingIndex_): Index of the possibly matching files
     # * *matching_selection* (_MatchingSelection_): Current user selection of matching files
-    def set_from_dirinfos(gui_controller, lst_dirinfo, index, matching_selection)
+    # * *lst_gui_filters* (<em>list<String></em>): List of GUI names that are used to filter elements (can be nil for no filter)
+    def set_from_dirinfos(gui_controller, lst_dirinfo, index, matching_selection, lst_gui_filters)
+      @source = SOURCE_DIRINFOS
       @gui_controller = gui_controller
     	@lst_dirinfo = lst_dirinfo
     	@index = index
     	@matching_selection = matching_selection
+      @lst_gui_filters = lst_gui_filters
       self.reset
     end
 
@@ -64,7 +76,8 @@ module FilesRebuilder
     	next_pointer = nil
     	next_matching_pointers = nil
 
-  		if (@pointer != nil)
+      case @source
+      when SOURCE_SINGLE
         # Iterator has been setup with a single pointer
         if (@last_given == nil)
   			 next_pointer = @pointer
@@ -73,9 +86,9 @@ module FilesRebuilder
         else
           @last_given = nil
         end
-  		elsif (@lst_dirinfo != nil)
+      when SOURCE_DIRINFOS
         # Iterator has been setup with a list of dirinfo
-        if (!@finished)
+        if !@finished
           @last_idx_dirinfo = (search_forward ? 0 : (@lst_dirinfo.size - 1)) if (@last_idx_dirinfo == nil)
           while ((search_forward and
                   (@last_idx_dirinfo < @lst_dirinfo.size)) or
@@ -338,7 +351,7 @@ module FilesRebuilder
     end
 
     # Get matching pointers for a given pointer.
-    # Returns nil if the pointer is already matched or if no matching pointers have been found
+    # Returns nil if the pointer is already matched, if no matching pointers have been found or if anything filters it out.
     #
     # Parameters::
     # * *pointer* <em>(_FileInfo_ | _SegmentPointer_)</em>: The pointer
@@ -346,8 +359,11 @@ module FilesRebuilder
     # Result::
     # * <em>list< [ (_FileInfo_ | _SegmentPointer_), MatchingIndexSinglePointer ] ></em>: The sorted list of matching pointers, along with their matching index information
     def get_matching_pointers(pointer, skip_matched)
-      if (skip_matched and
-          @matching_selection.matching_pointers.has_key?(pointer))
+      # Check already matched and GUI names filter
+      if ((skip_matched and
+           @matching_selection.matching_pointers.has_key?(pointer)) or
+          ((@lst_gui_filters != nil) and
+           !@lst_gui_filters.include?(@gui_controller.get_gui_name_for(pointer))))
         return nil
       else
         matching_pointers = @gui_controller.get_matching_info(pointer, @index).matching_files(@gui_controller.options[:score_min]).sort_by { |_, matching_file_info| -matching_file_info.score }
