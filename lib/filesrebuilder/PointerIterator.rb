@@ -3,14 +3,6 @@ module FilesRebuilder
 	# Provide an iterator interface used for ComparePointer GUI
   class PointerIterator
 
-  	# Constructor
-  	def initialize
-  		@last_given = nil
-  		@pointer = nil
-  		@matching_pointers = nil
-      self.reset
-  	end
-
   	# Initialize the iterator with a single pointer and its list of matching pointers
   	#
   	# Parameters::
@@ -19,6 +11,7 @@ module FilesRebuilder
     def set_from_single(pointer, matching_pointers)
     	@pointer = pointer
     	@matching_pointers = matching_pointers
+      @last_given = nil
     end
 
     # Initialize the iterator with a list of dirinfos
@@ -33,6 +26,7 @@ module FilesRebuilder
     	@lst_dirinfo = lst_dirinfo
     	@index = index
     	@matching_selection = matching_selection
+      self.reset
     end
 
     # Reset the iterator to its initial state
@@ -43,6 +37,19 @@ module FilesRebuilder
       @last_idx_segment = nil
       @last_idx_dirinfo = nil
       @finished = false
+    end
+
+    # Get counters about items in this iterator.
+    # Prerequisite: This is useful only for iterators set from dirinfo lists
+    #
+    # Result::
+    # * <em>map<Symbol,Object></em>: The counters. See Model::DirInfo#count for details
+    def count
+      result = {}
+      @lst_dirinfo.each do |dir_info|
+        result.merge!(dir_info.count(@matching_selection)) { |counter_name, old_counter, new_counter| old_counter + new_counter }
+      end
+      return result
     end
 
     # Get next pointer and matching pointers

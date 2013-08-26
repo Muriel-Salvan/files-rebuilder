@@ -40,7 +40,7 @@ module FilesRebuilder
       # * *pointer* (_FileInfo_ or _SegmentPointer_): The pointer referenced by this widget
       # * *message* (_String_): Additional message. nil for none. [default = nil]
       def add_pointer(pointer, message = nil)
-        @builder['labels_vbox'] << Gtk::Label.new((pointer.is_a?(Model::FileInfo) ? pointer.get_absolute_name : "#{pointer.file_info.get_absolute_name} ##{pointer.idx_segment} (#{pointer.segment.extensions.join(', ')})"))
+        @builder['labels_vbox'] << Gtk::Label.new((pointer.is_a?(Model::FileInfo) ? "#{pointer.get_absolute_name} (#{pointer.segments.size} segments)" : "#{pointer.file_info.get_absolute_name} ##{pointer.idx_segment} (#{pointer.segment.extensions.join(', ')})"))
         @builder['labels_vbox'].show_all
         @matching_pointers << pointer
       end

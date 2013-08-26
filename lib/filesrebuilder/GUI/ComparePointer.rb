@@ -15,6 +15,11 @@ module FilesRebuilder
         @itr_pointer = itr_pointer
         @single = single
         @builder['comparison_navigation_hbox'].visible = !single
+        if (!@single)
+          @builder['counters_label'].text = "#{@itr_pointer.count[:nbr_files]} files (#{@itr_pointer.count[:nbr_unmatched_files]} unmatched) / #{@itr_pointer.count[:nbr_segments]} segments (#{@itr_pointer.count[:nbr_unmatched_segments]} unmatched)"
+          @nbr_comparisons = @itr_pointer.count[:nbr_segments]
+        end
+        @idx_comparison = -1
         goto_next
       end
 
@@ -76,10 +81,12 @@ module FilesRebuilder
             if (pointer == nil)
               notify('No more items to compare')
             else
+              @idx_comparison = 0
               notify('Cycling items to compare from the beginning')
             end
           end
         else
+          @idx_comparison += 1
           notify('')
         end
         if (pointer != nil)
@@ -99,6 +106,7 @@ module FilesRebuilder
             notify('Cycling items to compare from the end')
           end
         else
+          @idx_comparison -= 1
           notify('')
         end
         if (pointer != nil)
@@ -136,8 +144,11 @@ module FilesRebuilder
             crcs[crc] = matching_pointer_widget
           end
         end
-        # First, focus the original one
-        set_focused(-1)
+        # First, focus the first matched one
+        set_focused(0)
+        if (!@single)
+          @builder['counters_label'].text = "##{@idx_comparison}/#{@nbr_comparisons-1} - #{@itr_pointer.count[:nbr_files]} files (#{@itr_pointer.count[:nbr_unmatched_files]} unmatched) / #{@itr_pointer.count[:nbr_segments]} segments (#{@itr_pointer.count[:nbr_unmatched_segments]} unmatched)"
+        end
       end
 
       # Set the focused matching pointer
@@ -163,8 +174,6 @@ module FilesRebuilder
           @builder['matching_scrolledwindow'].vadjustment.value = matching_pointers_container.children[idx_focus].allocation.y if (idx_focus != -1)
         end
       end
-
-      private
 
       # Notify a message to the user
       #
