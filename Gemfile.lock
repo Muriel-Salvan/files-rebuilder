@@ -2,10 +2,10 @@ PATH
   remote: .
   specs:
     filesrebuilder (0.0.1)
-      fileshunter
+      fileshunter (>= 0.1.1)
       gtk2
       ioblockreader
-      rUtilAnts (>= 1.0)
+      rUtilAnts (>= 2.0)
       ruby-serial
 
 GEM
@@ -13,10 +13,10 @@ GEM
   specs:
     atk (2.0.2-x86-mingw32)
       glib2 (= 2.0.2)
-    bindata (1.5.0)
+    bindata (1.5.1)
     cairo (1.12.6-x86-mingw32)
       pkg-config
-    fileshunter (0.1.0.20130725)
+    fileshunter (0.1.1.20130827)
       bindata
       ioblockreader (>= 1.0.3)
       rUtilAnts (>= 1.0)
@@ -34,9 +34,9 @@ GEM
       cairo (>= 1.12.5)
       glib2 (= 2.0.2)
     pkg-config (1.1.4)
-    rUtilAnts (1.0.1.20130320)
+    rUtilAnts (2.0.0.20130827)
     rake (10.1.0)
-    ruby-serial (1.0.2.20130725)
+    ruby-serial (1.0.3.20130731)
       msgpack
 
 PLATFORMS

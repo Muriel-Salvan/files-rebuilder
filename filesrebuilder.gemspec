@@ -6,8 +6,8 @@ Gem::Specification.new do |s|
   s.version     = '0.0.1'
   s.summary     = ''
   s.authors     = ''
-  s.add_dependency('rUtilAnts', '>= 1.0')
-  s.add_dependency('fileshunter')
+  s.add_dependency('rUtilAnts', '>= 2.0')
+  s.add_dependency('fileshunter', '>= 0.1.1')
   s.add_dependency('ioblockreader')
   s.add_dependency('gtk2')
   s.add_dependency('ruby-serial')
