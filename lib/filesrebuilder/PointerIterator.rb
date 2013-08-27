@@ -80,9 +80,9 @@ module FilesRebuilder
       when SOURCE_SINGLE
         # Iterator has been setup with a single pointer
         if (@last_given == nil)
-  			 next_pointer = @pointer
-  			 next_matching_pointers = @matching_pointers
-  			 @last_given = next_pointer
+         next_pointer = @pointer
+         next_matching_pointers = @matching_pointers
+         @last_given = next_pointer
         else
           @last_given = nil
         end
@@ -105,7 +105,7 @@ module FilesRebuilder
         end
       else
         raise 'PointerIterator has not been setup before calling next'
-  		end
+      end
 
   		return next_pointer, next_matching_pointers
     end

@@ -202,7 +202,7 @@ module FilesRebuilder
     # Parameters::
     # * *dir_name* (_String_): The directory to display
     def display_dir_content(dir_name)
-      new_widget = @gui_factory.new_widget('ShowDir')
+      new_widget = @gui_factory.new_widget('ShowDir', @main_widget)
       new_widget.set_dir_name(dir_name, @data.dir_info(dir_name))
       new_widget.show
     end
@@ -348,7 +348,7 @@ module FilesRebuilder
         matching_selection = @data.dst_selection
       end
       # Display CompareGroup window
-      new_widget = @gui_factory.new_widget('CompareGroup')
+      new_widget = @gui_factory.new_widget('CompareGroup', @main_widget)
       new_widget.set_dirs_to_compare(lst_dirs, index, matching_selection)
       new_widget.show
     end
@@ -395,7 +395,7 @@ module FilesRebuilder
     # * *matching_selection* (_MatchingSelection_): Current user selection of matching files
     def display_dirinfo_comparator(lst_dirinfo, index, matching_selection)
       # Display ComparePointer window
-      new_widget = @gui_factory.new_widget('ComparePointer')
+      new_widget = @gui_factory.new_widget('ComparePointer', @main_widget)
       itr_pointer = PointerIterator.new
       itr_pointer.set_from_dirinfos(self, lst_dirinfo, index, matching_selection, @data.options[:gui_names_filter])
       new_widget.set_pointers_to_compare(itr_pointer, matching_selection, false)
@@ -486,7 +486,7 @@ module FilesRebuilder
 
     # Display preferences dialog
     def display_preferences
-      pref_widget = @gui_factory.new_widget('Preferences')
+      pref_widget = @gui_factory.new_widget('Preferences', @main_widget)
       pref_widget.set_options(@data.options)
       pref_widget.show
     end

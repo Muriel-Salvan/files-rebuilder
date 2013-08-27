@@ -21,9 +21,10 @@ module FilesRebuilder
     #
     # Parameters::
     # * *gui_id* (_String_): The GUI widget ID
+    # * *parent_window* (<em>Gtk::Window</em>): The parent window. Can be nil if none. [default = nil]
     # Result::
     # * <em>Gtk::Widget</em>: The corresponding widget
-    def new_widget(gui_id)
+    def new_widget(gui_id, parent_window = nil)
       # Get the cached Glade content
       if !@gui_contents.has_key?(gui_id)
         require "filesrebuilder/GUI/#{gui_id}"
@@ -35,6 +36,7 @@ module FilesRebuilder
       gtk_builder = Gtk::Builder.new
       gtk_builder.add_from_string(@gui_contents[gui_id])
       new_widget = gtk_builder[gui_id.split('/')[-1]]
+      new_widget.set_transient_for(parent_window) if (parent_window != nil)
       # Associate its methods
       new_widget.extend(GUIHandler)
       new_widget.extend(eval("FilesRebuilder::GUI::#{gui_id.gsub('/', '::')}"))
